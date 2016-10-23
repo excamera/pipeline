@@ -13,13 +13,13 @@ PICKY_CXXFLAGS="-pedantic -Wall -Wextra -Weffc++ -Werror"
 AC_SUBST([CXX11_FLAGS])
 AC_SUBST([PICKY_CXXFLAGS])
 
-# Add Python FLAGS
-
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_RANLIB
+LT_INIT
 
 # Checks for libraries.
+PKG_CHECK_MODULES([OpenSSL], [libssl libcrypto])
 
 # Checks for header files.
 
@@ -27,3 +27,12 @@ AC_PROG_RANLIB
 AC_TYPE_UINT16_T
 
 # Checks for library functions.
+
+# Check for Python
+AM_CHECK_PYTHON_HEADERS(,[AC_MSG_ERROR(could not find Python headers)])
+
+AC_CONFIG_FILES([
+        Makefile
+        src/Makefile])
+
+AC_OUTPUT
