@@ -6,6 +6,8 @@ AC_PREREQ([2.68])
 AC_INIT([pipeline], [0.01], [kvasukib@eng.ucsd.edu])
 AM_INIT_AUTOMAKE([foreign])
 AM_PATH_PYTHON([2.7])
+AC_CONFIG_SRC_DIR([src/pipeline])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Add picky CXXFLAGS
 CXX11_FLAGS="-std=c++11 -pthread"

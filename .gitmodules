@@ -1,0 +1,9 @@
+[submodule "mu"]
+	path = external/mu
+	url = https://github.com/excamera/mu.git
+[submodule "alfalfa"]
+	path = external/alfalfa
+	url = https://github.com/excamera/alfalfa.git
+[submodule "googletest"]
+	path = external/googletest
+	url = https://github.com/google/googletest.git

@@ -1,0 +1,36 @@
+language: python
+sudo: required
+services: docker
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++-5
+    - vpx-tools
+    - python-dev
+
+matrix:
+  include:
+  - python: "2.7"
+    env: TEST_TYPE=test
+  - python: "2.7"
+    env: TEST_TYPE=check
+
+install:
+  - pip install -e .
+  - travis_retry pip install -r requirements-dev.txt
+
+before_script:
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 99
+  - sudo apt-get remove -y --force-yes python-openssl
+  - sudo pip install boto3
+  - sudo pip install pyOpenSSL
+  - sudo pip install PIL
+
+script:
+  - ./travis.sh
+
+after_failure:
+  - cat pipeline-0.01/_build/src/tests/test-suite.log
