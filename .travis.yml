@@ -19,7 +19,6 @@ matrix:
     env: TEST_TYPE=check
 
 install:
-  - pip install -e .
   - travis_retry pip install -r requirements-dev.txt
 
 before_script:
