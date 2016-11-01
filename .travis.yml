@@ -34,3 +34,7 @@ script:
 
 after_failure:
   - cat pipeline-0.01/_build/src/tests/test-suite.log
+
+notifications:
+  slack: 
+    gmporter:aWjhwIqXIDEYCaOmFMiql8A6
