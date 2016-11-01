@@ -27,6 +27,7 @@ before_script:
   - sudo pip install boto3
   - sudo pip install pyOpenSSL
   - sudo pip install pillow
+  - sudo chmod 777 ./travis.sh
 
 script:
   - ./travis.sh
