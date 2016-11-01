@@ -1,7 +1,6 @@
 language: python
 sudo: required
 services: docker
-
 addons:
   apt:
     sources:
@@ -10,17 +9,14 @@ addons:
     - g++-5
     - vpx-tools
     - python-dev
-
 matrix:
   include:
-  - python: "2.7"
+  - python: '2.7'
     env: TEST_TYPE=test
-  - python: "2.7"
+  - python: '2.7'
     env: TEST_TYPE=check
-
 install:
   - travis_retry pip install -r requirements-dev.txt
-
 before_script:
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 99
   - sudo apt-get remove -y --force-yes python-openssl
@@ -28,12 +24,10 @@ before_script:
   - sudo pip install pyOpenSSL
   - sudo pip install pillow
   - sudo chmod 777 ./travis.sh
-
 script:
-  - ./travis.sh
-
+  - "./travis.sh"
 after_failure:
   - cat pipeline-0.01/_build/src/tests/test-suite.log
-
 notifications:
-  slack: ucsdnetworking:aWjhwIqXIDEYCaOmFMiql8A6
+  slack:
+    secure: s9Y7fSmMA2d+Do5GLfW7e3QfBFj+z5V4wHHVRt8x4gKdeHDRONaa+y3b4y7JsESljeXCttRXtuC1nIwmMKRfQ0fgfBxQWGatYsaU241ng+BWwnZeJgMsFOsCyyyEHBuYJ2cG3FTvX7EEmTXGvTtwN0b/Khbi0e8AJmmqK5i6/BBHWrS8caVntaQFu/lGoxAPoV/LliDollatzbLUR8Rnpff+3RE9SzeqL9pqpa4TZaTG9R4sF8QaZFJd1jL5e+oMVSfdtQc/f6EesIlYWIqyUNRE6KEB0621wL+mU+/q112s9F1oeo5+8vxdIC5NFUjp9tmNl6w2jkKYvJY4caSoXBHMf5pBAJJL8a2aX9oJwRyMy95XFQ7Dl6y4SOQOm8/t+nBOY1CiZz3ymSVdB9CoA0MkgB6oJRElpcpTO7quv//DTeuLvk7OsMGKufmZHX4jSHxylFeH9iaZRU4woiURn0IMv8hItYkmC0RoyZzSWbfiArQXC8vs6/8ylN/2tC/oQjY3HONIsB5VWQx+D4XVtO1pvbHZmNkxTTT92T+H6oXQJJHZSTrWrsOYoZ9p16GThqK14vpXOWZn382kdbOKiaxUVLnwFcG4F0RnekO3XFKlKAPksO5ilNP1858P7ngUzKZ/0UGysIrXt9X6n/Htsh4Uu+GmHoirNTm2HBqRQOo=
