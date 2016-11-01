@@ -26,7 +26,7 @@ before_script:
   - sudo apt-get remove -y --force-yes python-openssl
   - sudo pip install boto3
   - sudo pip install pyOpenSSL
-  - sudo pip install PIL
+  - sudo pip install pillow
 
 script:
   - ./travis.sh
