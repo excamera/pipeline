@@ -31,10 +31,14 @@ class CmdLineParser(object):
                       dest="concurrent_lambdas",
                       default="100",
                       help="No of lambdas in parallel")
-    parser.add_option("-f", "--user-spec",
+    parser.add_option("-u", "--user-spec",
                       dest="user_spec",
                       default="user1.json",
                       help="User Spec in json format")
+    parser.add_option("-f", "--file",
+                      dest="filename",
+                      default="job1.json",
+                      help="Job Spec in json format (TBC)")
     (self.options, self.args) = parser.parse_args()
 
   def get_options_and_args(self):

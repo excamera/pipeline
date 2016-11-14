@@ -13,8 +13,10 @@ import logging
 from enum import Enum
 
 # Global Variables declaration
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+logger = logging.getLogger("JOBSPEC")
+logging.basicConfig()
+logger = logging.getLogger('JOBSPEC')
+logger.setLevel(logging.DEBUG)
 
 # JobType class
 class JobType(Enum):
@@ -24,9 +26,9 @@ class JobType(Enum):
 
 # JobSpec class
 class JobSpec(object):
-  def __init__(self, params_hash, job_type):
-    self.params_hash = params_hash
-    self.job_type    = job_type
+  def __init__(self, filename, **kwargs):
+    self.filename    = filename
+    self.params_hash = kwargs
 
   def get_params_hash(self, key):
     if key in self.params_hash:
@@ -34,10 +36,7 @@ class JobSpec(object):
     else:
       logger.debug("[JobSpec] Key not found")
 
-  def construct_params_hash(self, **kwargs):
-    self.params_hash = kwargs
-
-  def writeJsonToFile(self, ofd):
+  def writeJsonToFile(self):
     """ Function to write JSON object to 
         a file represented by ofd
   
@@ -52,8 +51,10 @@ class JobSpec(object):
         Exception: If file write fails
     """
     try:
+      ofd = open(self.filename, 'w')
       ofd.write(json.dumps(self.params_hash))
       logger.debug("[JobSpec] Write complete")
+      ofd.close()
     except Exception as inst:
       logger.error(type(inst)) 
       logger.error(inst.args)
