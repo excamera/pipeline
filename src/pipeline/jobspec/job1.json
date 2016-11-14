@@ -1,1 +1,22 @@
-{"args": {"args": {"-f": 6, "-c": "/tmp/ssl/ca_cert.pem.pem", "-b": "bucket", "-l": "ffmpeg", "-n": "video-input/folder/%08d.png", "-k": "/tmp/ssl/server_key.pem", "-s": "/tmp/ssl/server_cert.pem"}}, "input_prefix": "video-input/folder/%08d.png", "output_bucket": "video-output", "output_prefix": "video-output/folder/%08d.png", "command": {"grayscale": {"./ffmpeg": " -i ##INFILE## -vf hue=s=0 -c:a copy -safe 0 ##OUTFILE##"}}, "input_bucket": "video-input"}
+{
+    "args": {
+        "args": {
+            "-b": "bucket",
+            "-c": "/tmp/ssl/ca_cert.pem.pem",
+            "-f": 6,
+            "-k": "/tmp/ssl/server_key.pem",
+            "-l": "ffmpeg",
+            "-n": "video-input/folder/%08d.png",
+            "-s": "/tmp/ssl/server_cert.pem"
+        }
+    },
+    "command": {
+        "grayscale": {
+            "./ffmpeg": " -i ##INFILE## -vf hue=s=0 -c:a copy -safe 0 ##OUTFILE##"
+        }
+    },
+    "input_bucket": "video-input",
+    "input_prefix": "video-input/folder/%08d.png",
+    "output_bucket": "video-output",
+    "output_prefix": "video-output/folder/%08d.png"
+}

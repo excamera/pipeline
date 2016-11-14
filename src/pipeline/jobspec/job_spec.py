@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Full Imports
-import json
-import simplejson
+import simplejson as json
 import collections
 import itertools
 import six
@@ -52,7 +51,9 @@ class JobSpec(object):
     """
     try:
       ofd = open(self.filename, 'w')
-      ofd.write(json.dumps(self.params_hash))
+      ofd.write(json.dumps(self.params_hash,
+                           sort_keys=True,
+                           indent='    '))
       logger.debug("[JobSpec] Write complete")
       ofd.close()
     except Exception as inst:
