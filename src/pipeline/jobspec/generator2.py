@@ -22,13 +22,17 @@ class Generator(object):
             logger.error('unknown type')
             return None
 
-    def generate(self, pipeline):
-        jobspecs = []
+    def parse(self, pipeline):
         try:
             ppl = json.loads(pipeline)
         except TypeError as e:
             logger.error(e.message)
             logger.error('Invalid pipeline')
+            return None
+        return ppl
+
+    def generate(self, ppl):
+        jobspecs = []
 
         # connect the channels
 
@@ -87,7 +91,6 @@ class Generator(object):
                 dest['type'] = 'directory'
                 dest['chunks'] = [dest['URI']%i for i in range(dest['nchunks'])]
 
-
             for i in range(n['nworkers']):  # each worker get one or more chunks
                 worker = {}
                 worker['id'] = i
@@ -130,10 +133,12 @@ if __name__ == '__main__':
             "nodes" :
                 [
                     {"node":0, "upstream":[0], "downstream":[1], "nworkers":5, "nchunks":null, "amplification":6, "engine": "aws-lambda", "operator": "decode", "command":["cmd"]},
-                    {"node":1, "upstream":[1], "downstream":[2], "nworkers":5, "nchunks":null, "amplification":10, "engine": "aws-lambda", "operator": "grayscale", "command":["cmd"]},
+                    {"node":1, "upstream":[1], "downstream":[2], "nworkers":5, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "grayscale", "command":["cmd"]},
                     {"node":2, "upstream":[2], "downstream":[3],  "nworkers":5, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "encode", "command":["cmd"]}
                 ]
         }'''
 
     gen = Generator()
-    gen.generate(pipe)
+    ppl = gen.parse(pipe)
+    jobspecs = gen.generate(ppl)
+    print json.dumps(jobspecs, indent=True)
