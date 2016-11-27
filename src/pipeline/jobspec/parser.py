@@ -50,6 +50,7 @@ class JobSpecParser(object):
     (options, args) = parser.get_options_and_args()
     parser          = JobSpecParser(options.filename)
     logger.debug(parser.json_dump)
+    return parser
 
 if __name__ == "__main__":
   JobSpecParser.spawn_parser()
