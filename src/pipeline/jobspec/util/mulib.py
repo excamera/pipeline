@@ -1,5 +1,13 @@
 import sys
 import s3lib
+import logging
+
+logger    = logging.getLogger(__name__)
+nh        = logging.NullHandler()
+formatter = logging.Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s','%m-%d %H:%M:%S')
+nh.setFormatter(formatter)
+logger.addHandler(nh)
+logger.setLevel(logging.DEBUG)
 
 class Operator(object):
   operators = {
@@ -32,18 +40,24 @@ class CoordinatorArgs(object):
   }
 
   @staticmethod
-  def get_work_distribution(lambdas, prefix):
-    num_obj    = s3lib.find_num_objects(prefix)
+  def get_work_distribution(bucket, prefix, lambdas):
+    logger.debug("bucket=%s, prefix=%s lambdas=%s" %(bucket, prefix, lambdas))
+    (num_obj, keys) = s3lib.get_num_objects(bucket, prefix)
+    logger.debug("[MULIB] No of objects : " + str(num_obj))
     if num_obj is None:
       return CoordinatorArgs.defaultFrames
     else:
-      return num_obj / min(num_obj, lambdas)
+      return int(num_obj) / min(int(num_obj), int(lambdas))
 
   @staticmethod
-  def get_coordinator_args(lambdas, prefix):
+  def get_coordinator_args(bucket, prefix, lambdas):
     CoordinatorArgs.args['-n'] = lambdas
-    CoordinatorArgs.args['-f'] =  CoordinatorArgs.get_work_distribution(lambdas, prefix)
+    CoordinatorArgs.args['-f'] =  CoordinatorArgs.get_work_distribution(bucket, prefix, lambdas)
     return { 'args' : CoordinatorArgs.args }
+
+  @staticmethod
+  def get_frames():
+    return CoordinatorArgs.args['-f']
 
 class MuLib(object):
   @staticmethod
@@ -51,5 +65,9 @@ class MuLib(object):
     return Operator.get_cmd_string(operator)
    
   @staticmethod
-  def get_coordinator_args(lambdas, prefix):
-    return CoordinatorArgs.get_coordinator_args(lambdas, prefix)
+  def get_coordinator_args(bucket, prefix, lambdas):
+    return CoordinatorArgs.get_coordinator_args(bucket, prefix, lambdas)
+
+  @staticmethod
+  def get_frames():
+    return CoordinatorArgs.get_frames()

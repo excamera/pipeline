@@ -12,7 +12,6 @@ import logging
 from enum import Enum
 
 # Global Variables declaration
-logger = logging.getLogger("JOBSPEC")
 logging.basicConfig()
 logger = logging.getLogger('JOBSPEC')
 logger.setLevel(logging.DEBUG)
@@ -24,7 +23,7 @@ class JobType(Enum):
   MANY_TO_ONE = 3
 
 # JobSpec class
-class JobSpec(object):
+class JobSpecWriter(object):
   def __init__(self, filename, **kwargs):
     self.filename    = filename
     self.params_hash = kwargs
@@ -35,7 +34,7 @@ class JobSpec(object):
     else:
       logger.debug("[JobSpec] Key not found")
 
-  def writeJsonToFile(self):
+  def writeJsonToFile(self, ofd, params_hash):
     """ Function to write JSON object to 
         a file represented by ofd
   
@@ -50,12 +49,9 @@ class JobSpec(object):
         Exception: If file write fails
     """
     try:
-      ofd = open(self.filename, 'w')
-      ofd.write(json.dumps(self.params_hash,
-                           sort_keys=True,
+      ofd.write(json.dumps(params_hash,
                            indent='    '))
       logger.debug("[JobSpec] Write complete")
-      ofd.close()
     except Exception as inst:
       logger.error(type(inst)) 
       logger.error(inst.args)

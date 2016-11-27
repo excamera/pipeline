@@ -9,19 +9,19 @@ class CmdLineParser(object):
                           version="%prog 1.0")
     parser.add_option("-i", "--input-bucket",
                       dest="input_bucket",
-                      default="video-input",
+                      default="sintel-1k-png16",
                       help="Input bucket in S3")
     parser.add_option("-p", "--input-prefix",
                       dest="input_prefix",
-                      default="video-input/folder/%08d.png",
+                      default="sintel-1k-png16/",
                       help="Input prefix in S3")
     parser.add_option("-o", "--output-bucket",
                       dest="output_bucket",
-                      default="video-output",
+                      default="sintel-1k-png16",
                       help="Output bucket in S3")
     parser.add_option("-t", "--output-prefix",
                       dest="output_prefix",
-                      default="video-output/folder/%08d.png",
+                      default="sintel-1k-png16-output/",
                       help="Output prefix in S3")
     parser.add_option("-r", "--operator",
                       dest="operator",
@@ -29,7 +29,7 @@ class CmdLineParser(object):
                       help="Image / Scene / Video Operator")
     parser.add_option("-n", "--concurrent-lambdas",
                       dest="concurrent_lambdas",
-                      default="100",
+                      default="10",
                       help="No of lambdas in parallel")
     parser.add_option("-u", "--user-spec",
                       dest="user_spec",
