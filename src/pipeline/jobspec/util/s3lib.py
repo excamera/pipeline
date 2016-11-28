@@ -59,3 +59,23 @@ def get_input_chunks(bucketname,
     logger.error("[S3LIB] " + str(type(inst)))
     logger.error("[S3LIB] " + str(inst.args))
     logger.error("[S3LIB] " + str(inst))
+
+def exists(bucketname, 
+           prefix):
+  try:
+    AWS_KEY        = os.environ['AWS_ACCESS_KEY_ID']
+    AWS_SECRET     = os.environ['AWS_SECRET_ACCESS_KEY']
+    aws_connection = S3Connection(AWS_KEY, AWS_SECRET)
+    bucket         = aws_connection.lookup(bucketname)
+    if bucket is None:
+      return False
+    bucket = s3.Bucket(bucketname)
+    objects = list(bucket.objects.filter(Prefix=prefix))
+    if len(objects) > 0:
+      return True
+    else:
+      return False
+  except Exception as inst:
+    logger.error("[S3LIB] " + str(type(inst)))
+    logger.error("[S3LIB] " + str(inst.args))
+    logger.error("[S3LIB] " + str(inst))

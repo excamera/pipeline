@@ -24,6 +24,8 @@ class JobSpecValidator(object):
 
   def do_validate(self):
     logger.debug(self.job_spec)
+    return s3lib.exists(self.job_spec['input_bucket'],
+                        self.job_spec['input_prefix'])
 
   @staticmethod
   def spawn_validator():
