@@ -10,8 +10,11 @@ import logging
 from job_spec import JobSpecWriter
 from util import *
 
-logging.basicConfig()
-logger = logging.getLogger('JOBSPEC')
+logger    = logging.getLogger(__name__)
+nh        = logging.NullHandler()
+formatter = logging.Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s','%m-%d %H:%M:%S')
+nh.setFormatter(formatter)
+logger.addHandler(nh)
 logger.setLevel(logging.DEBUG)
 
 class Generator(object):

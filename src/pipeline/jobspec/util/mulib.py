@@ -10,6 +10,10 @@ nh.setFormatter(formatter)
 logger.addHandler(nh)
 logger.setLevel(logging.DEBUG)
 
+# path insert
+sys.path.insert(0, '../../../external/mu/src/lambdaize/')
+import job_spec_server
+
 # Get commands for the operator
 class Operator(object):
   operators = {
@@ -67,7 +71,7 @@ class MuInvoker(object):
   @staticmethod
   def invoke_coordinator(job_spec):
     logger.debug("[MULIB] Invoking mu...")
-    #lambdaize.pipeline_coordinator.run(job_spec)
+    job_spec_server.invoke(job_spec)
 
 # Front-End interface for mu
 class MuLib(object):
