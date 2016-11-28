@@ -110,6 +110,7 @@ class JobSpecGenerator(Generator):
       if self.counter < self.lambdas:
         self.counter = self.counter + self.generate_entry(lambdaNum)
     self.write_job_spec_to_file()
+    return self.filename
  
   def write_job_spec_to_file(self):
     try:
@@ -134,7 +135,7 @@ class JobSpecGenerator(Generator):
     (options, args) = parser.get_options_and_args()
     job_spec_gen    = JobSpecGenerator(options)
     logger.info("[JOBSPEC] Generating job_spec")
-    job_spec_gen.generate_entries()
+    return job_spec_gen.generate_entries()
 
 if __name__ == "__main__":
-  JobSpecGenerator.spawn_generator()
+  logger.debug("[JOBSPEC] Job Spec File : " + JobSpecGenerator.spawn_generator())

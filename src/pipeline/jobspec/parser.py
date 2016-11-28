@@ -49,7 +49,7 @@ class JobSpecParser(object):
     parser          = cmd_line_parser.CmdLineParser()
     (options, args) = parser.get_options_and_args()
     parser          = JobSpecParser(options.filename)
-    logger.debug(parser.json_dump)
+    #logger.debug(parser.json_dump)
     return parser
 
 if __name__ == "__main__":

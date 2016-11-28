@@ -2,6 +2,7 @@ import sys
 import s3lib
 import logging
 
+# Logging variable
 logger    = logging.getLogger(__name__)
 nh        = logging.NullHandler()
 formatter = logging.Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s','%m-%d %H:%M:%S')
@@ -9,6 +10,7 @@ nh.setFormatter(formatter)
 logger.addHandler(nh)
 logger.setLevel(logging.DEBUG)
 
+# Get commands for the operator
 class Operator(object):
   operators = {
     'grayscale' : { 
@@ -26,6 +28,7 @@ class Operator(object):
   def get_cmd_string(operator):
     return { operator : Operator.operators[operator] }
 
+# Prepare coordinator args
 class CoordinatorArgs(object):
   ssl_dir = "/tmp/ssl"
   defaultFrames = 6
@@ -59,6 +62,14 @@ class CoordinatorArgs(object):
   def get_frames():
     return CoordinatorArgs.args['-f']
 
+# Invoking Layer for mu
+class MuInvoker(object):
+  @staticmethod
+  def invoke_coordinator(job_spec):
+    logger.debug("[MULIB] Invoking mu...")
+    #lambdaize.pipeline_coordinator.run(job_spec)
+
+# Front-End interface for mu
 class MuLib(object):
   @staticmethod
   def get_cmd_string(operator):
@@ -71,3 +82,7 @@ class MuLib(object):
   @staticmethod
   def get_frames():
     return CoordinatorArgs.get_frames()
+
+  @staticmethod
+  def invoke_mu_coordinator(job_spec):
+    MuInvoker.invoke_coordinator(job_spec)
