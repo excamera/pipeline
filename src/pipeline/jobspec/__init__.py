@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
+from .generator2 import *
+from .job_coordinator import *
 
-## Init
-from .generator import *
-from .validator import *
-from .parser    import *
-from .job_spec  import *
-
-import json
-import simplejson
