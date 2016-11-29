@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-class Generator(object):
-    def get_inputchunks(self, channel, nchunks):  # currently just a stub
+class Generator2(object):
+    def get_inputchunks(self, channel, nchunks, nframes=6):  # currently just a stub
         if channel['type'] == 'mp4':
             return 'binary', [(i*12345, (i+1)*12345-1) for i in range(nchunks)]  # byte range
 
         if channel['type'] == 'png':
-            return 'frame', [(i*6+1, (i+1)*6) for i in range(nchunks)]  # frame range
+            return 'frame', [(i*nframes+1, (i+1)*nframes) for i in range(nchunks)]  # frame range
 
         else:
             logger.error('unknown type')
@@ -43,9 +43,9 @@ class Generator(object):
                 ppl['channels'][dns]['src'] = n['node']
 
         for c in ppl['channels']:
-            if c['URI'].startswith('channel'):
-                c['URI'] = 's3://tempbucket/' + ppl['pipeid'] + '/' + c['URI'][c['URI'].index('://') + 3:]
-                c['URI'] = c['URI'] % (str(c['channel']), '%s')  # assign temporary dir
+            if c['URI'].startswith('channel'):  # materialize temp channels
+                c['URI'] = 's3://lixiang-temp/' + ppl['pipeid'] + '/' + c['URI'][c['URI'].index('://') + 3:]
+                c['URI'] = c['URI'] % (str(c['channel']), '%s')
 
             if c['src'] == 'src':
                 c['nchunks'] = ppl['nodes'][c['dest']]['nworkers']  # for source nodes, determine nchunk by nworker
@@ -83,13 +83,14 @@ class Generator(object):
             for src in spec['upstreams']:
                 if src['src'] == 'src':
                     src['type'], src['chunks'] = self.get_inputchunks(src, n['nchunks'])
+                    spec['nframes'] = src['chunks'][0][1]-src['chunks'][0][0]+1
                 else:
                     src['type'] = 'directory'
                     src['chunks'] = [src['URI']%i for i in range(src['nchunks'])]
 
             for dest in spec['downstreams']:
-                dest['type'] = 'directory'
-                dest['chunks'] = [dest['URI']%i for i in range(dest['nchunks'])]
+                dest['type'] = 'frames'
+                dest['chunks'] = src['chunks']
 
             for i in range(n['nworkers']):  # each worker get one or more chunks
                 worker = {}
@@ -121,24 +122,38 @@ class Generator(object):
 
 if __name__ == '__main__':
 
+    # pipe = '''{
+    #         "pipeid" : "sjf2JY1f",
+    #         "channels" :
+    #             [
+    #                 {"channel":0, "URI":"s3://input/input.mp4", "nchunks":null, "type":"mp4", "src":"src", "dest":null},
+    #                 {"channel":1, "URI":"channel://%s/%s/", "nchunks":null, "type":"png", "src":null, "dest":null},
+    #                 {"channel":2, "URI":"channel://%s/%s/", "nchunks":null, "type":"png", "src":null, "dest":null},
+    #                 {"channel":3, "URI":"s3://output/%s/output.mp4", "nchunks":null, "type":"mp4", "src":null, "dest":"dest"}
+    #             ],
+    #         "nodes" :
+    #             [
+    #                 {"node":0, "upstream":[0], "downstream":[1], "nworkers":5, "nchunks":null, "amplification":6, "engine": "aws-lambda", "operator": "decode", "command":["cmd"]},
+    #                 {"node":1, "upstream":[1], "downstream":[2], "nworkers":5, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "grayscale", "command":["cmd"]},
+    #                 {"node":2, "upstream":[2], "downstream":[3],  "nworkers":5, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "encode", "command":["cmd"]}
+    #             ]
+    #     }'''
+
     pipe = '''{
             "pipeid" : "sjf2JY1f",
             "channels" :
                 [
-                    {"channel":0, "URI":"s3://input/input.mp4", "nchunks":null, "type":"mp4", "src":"src", "dest":null},
-                    {"channel":1, "URI":"channel://%s/%s/", "nchunks":null, "type":"png", "src":null, "dest":null},
-                    {"channel":2, "URI":"channel://%s/%s/", "nchunks":null, "type":"png", "src":null, "dest":null},
-                    {"channel":3, "URI":"s3://output/%s/output.mp4", "nchunks":null, "type":"mp4", "src":null, "dest":"dest"}
+                    {"channel":0, "URI":"s3://lixiang-lambda-test/input/%08d.png", "nchunks":null, "type":"png", "src":"src", "dest":null},
+                    {"channel":1, "URI":"s3://lixiang-lambda-test/output/%08d.png", "nchunks":null, "type":"mp4", "src":null, "dest":"dest"}
                 ],
             "nodes" :
                 [
-                    {"node":0, "upstream":[0], "downstream":[1], "nworkers":5, "nchunks":null, "amplification":6, "engine": "aws-lambda", "operator": "decode", "command":["cmd"]},
-                    {"node":1, "upstream":[1], "downstream":[2], "nworkers":5, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "grayscale", "command":["cmd"]},
-                    {"node":2, "upstream":[2], "downstream":[3],  "nworkers":5, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "encode", "command":["cmd"]}
+                    {"node":0, "upstream":[0], "downstream":[1], "nworkers":10, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "crawlingtext", "command":[]}
                 ]
         }'''
 
-    gen = Generator()
+    gen = Generator2()
     ppl = gen.parse(pipe)
     jobspecs = gen.generate(ppl)
     print json.dumps(jobspecs, indent=True)
+

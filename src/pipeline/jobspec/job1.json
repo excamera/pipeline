@@ -1,4 +1,24 @@
 {
+    "args": {
+        "args": {
+            "-f": 149,
+            "-c": "/tmp/ssl/ca_cert.pem.pem",
+            "-b": "bucket",
+            "-l": "ffmpeg",
+            "-n": "10",
+            "-k": "/tmp/ssl/server_key.pem",
+            "-s": "/tmp/ssl/server_cert.pem"
+        }
+    },
+    "input_prefix": "sintel-1k-png16/",
+    "output_bucket": "sintel-1k-png16",
+    "output_prefix": "sintel-1k-png16-output/",
+    "command": {
+        "grayscale": {
+            "./ffmpeg": " -i ##INFILE## -vf hue=s=0 -c:a copy -safe 0 ##OUTFILE##"
+        }
+    },
+    "input_bucket": "sintel-1k-png16",
     "0": {
         "input_chunk": [
             "sintel-1k-png16/00000001.png",
@@ -457,17 +477,6 @@
             "sintel-1k-png16/00020260.png",
             "sintel-1k-png16/00020261.png"
         ]
-    },
-    "args": {
-        "args": {
-            "-f": 149,
-            "-c": "/tmp/ssl/ca_cert.pem.pem",
-            "-b": "bucket",
-            "-l": "ffmpeg",
-            "-n": "10",
-            "-k": "/tmp/ssl/server_key.pem",
-            "-s": "/tmp/ssl/server_cert.pem"
-        }
     },
     "4": {
         "input_chunk": [
@@ -1387,15 +1396,6 @@
             "sintel-1k-png16/00021304.png"
         ]
     },
-    "input_prefix": "sintel-1k-png16/",
-    "output_bucket": "sintel-1k-png16",
-    "output_prefix": "sintel-1k-png16-output/",
-    "command": {
-        "grayscale": {
-            "./ffmpeg": " -i ##INFILE## -vf hue=s=0 -c:a copy -safe 0 ##OUTFILE##"
-        }
-    },
-    "input_bucket": "sintel-1k-png16",
     "6": {
         "input_chunk": [
             "sintel-1k-png16/00020709.png",
