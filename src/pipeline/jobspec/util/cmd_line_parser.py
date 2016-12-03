@@ -42,4 +42,13 @@ class CmdLineParser(object):
     (self.options, self.args) = parser.parse_args()
 
   def get_options_and_args(self):
+    user_spec_json = mulib.MuLib.parse_user_spec(self.user_spec)
+    add_user_spec_to_options(user_spec_json)
     return (self.options, self.args)
+
+  def add_user_spec_to_options(self, user_spec_json):
+    if user_spec_json is None:
+      return
+    for key in user_spec_json:
+      if key in user_spec_json:
+        self.options[key] = user_spec_json[key]

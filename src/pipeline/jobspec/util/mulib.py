@@ -1,6 +1,7 @@
 import sys
 import s3lib
 import logging
+import os
 
 # Logging variable
 logger    = logging.getLogger(__name__)
@@ -90,3 +91,9 @@ class MuLib(object):
   @staticmethod
   def invoke_mu_coordinator(job_spec):
     MuInvoker.invoke_coordinator(job_spec)
+
+  @staticmethod
+  def parse_user_spec(user_spec):
+    if os.path.exists(file_path):
+      with open(user_spec) as usd:
+        return json.load(usd)
