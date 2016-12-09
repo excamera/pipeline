@@ -25,9 +25,22 @@ def lambda_handler(event, context):
     # stored in the variable xml_output
     xml_output = subprocess.check_output(["mediainfo", "--full", "--output=XML", signed_url])
     logger.info("Output: {}".format(xml_output))
-
-    o = xmltodict.parse(xml_output)
-    return json.dumps(o)
+    xml_json = xmltodict.parse(xml_output)
+    return write_job_spec_to_file(xml_json)
+ 
+def write_job_spec_to_file(json_map):
+    try:
+      ofd = open("metadata.txt", "w")
+      json_map = json.dumps(xml_json,
+                            indent='    ')
+      ofd.write(json_map)
+      ofd.close()
+      s3_client.upload_file(bucket, "metadata.txt", "metadata.txt")
+      return json_map
+    except Exception as inst:
+      logger.error(type(inst))
+      logger.error(inst.args)
+      logger.error (inst)
 
 def get_signed_url(expires_in, bucket, obj):
     """
