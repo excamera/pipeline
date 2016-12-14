@@ -1,12 +1,14 @@
 import logging
 import subprocess
 import boto3
-import xmltodict, json
+import xmltodict
+import simplejson as json
 from optparse import OptionParser
 
 SIGNED_URL_EXPIRATION = 300     # The number of seconds that the Signed URL is valid
 logger = logging.getLogger('boto3')
 logger.setLevel(logging.INFO)
+s3_client = boto3.client('s3')
 
 def lambda_handler(event, context):
     # Loop through records provided by S3 Event trigger
@@ -26,21 +28,22 @@ def lambda_handler(event, context):
     xml_output = subprocess.check_output(["mediainfo", "--full", "--output=XML", signed_url])
     logger.info("Output: {}".format(xml_output))
     xml_json = xmltodict.parse(xml_output)
-    return write_job_spec_to_file(xml_json)
+    return write_job_spec_to_file(xml_json, bucket, key)
  
-def write_job_spec_to_file(json_map):
+def write_job_spec_to_file(xml_json, bucket, key):
     try:
       ofd = open("metadata.txt", "w")
       json_map = json.dumps(xml_json,
                             indent='    ')
       ofd.write(json_map)
       ofd.close()
-      s3_client.upload_file(bucket, "metadata.txt", "metadata.txt")
+      s3_client.upload_file("./metadata.txt", bucket, key + "metadata.txt")
       return json_map
     except Exception as inst:
-      logger.error(type(inst))
-      logger.error(inst.args)
-      logger.error (inst)
+      print (type(inst))
+      print (inst.args)
+      print (inst)
+      return json_map
 
 def get_signed_url(expires_in, bucket, obj):
     """
@@ -57,6 +60,15 @@ def get_signed_url(expires_in, bucket, obj):
                                                   ExpiresIn = expires_in)
     return presigned_url
 
+def invoke_metadata_extraction(bucket, key):
+  print (bucket, key)
+  event = {
+    'bucket' : bucket,
+    'key' : key
+  }
+  json_metadata = lambda_handler(event, {})
+  return json_metadata
+
 parser = OptionParser(usage="usage: %prog [options]",
                           version="%prog 1.0")
 parser.add_option("-b", "--bucket",
@@ -70,12 +82,4 @@ parser.add_option("-k", "--key",
 
 (options, args) = parser.parse_args()
 
-invoke_metadata_extraction(options.bucket, options.key)
-
-def invoke_metadata_extraction(bucket, key):
-  event = {
-    'bucket' : bucket,
-    'key' : key
-  }
-  json_metadata = lambda_handler(event, {})
-  return json_metadata
+print len(invoke_metadata_extraction(options.bucket, options.key))
