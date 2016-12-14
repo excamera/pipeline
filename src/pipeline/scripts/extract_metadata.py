@@ -69,9 +69,13 @@ parser.add_option("-k", "--key",
                   help="Input prefix in S3")
 
 (options, args) = parser.parse_args()
-event = {
-  'bucket' : options.bucket,
-  'key' : options.key
-}
-json_metadata = lambda_handler(event, {})
-print (json_metadata)
+
+invoke_metadata_extraction(options.bucket, options.key)
+
+def invoke_metadata_extraction(bucket, key):
+  event = {
+    'bucket' : bucket,
+    'key' : key
+  }
+  json_metadata = lambda_handler(event, {})
+  return json_metadata
