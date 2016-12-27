@@ -69,6 +69,10 @@ def invoke_metadata_extraction(bucket, key):
   json_metadata = lambda_handler(event, {})
   return json_metadata
 
+def parse_metadata_extraction(json_metadata):
+  print (len(json_metadata))
+  duration = json_metadata["Mediainfo"]["File"]["track"]["Duration"][4]
+
 parser = OptionParser(usage="usage: %prog [options]",
                           version="%prog 1.0")
 parser.add_option("-b", "--bucket",
@@ -82,4 +86,5 @@ parser.add_option("-k", "--key",
 
 (options, args) = parser.parse_args()
 
-print len(invoke_metadata_extraction(options.bucket, options.key))
+json_metadata = invoke_metadata_extraction(options.bucket, options.key)
+print (json_metadata)
