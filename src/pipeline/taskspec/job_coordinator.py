@@ -8,18 +8,53 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 lambda_function_map = {
-    'decode': {'name': 'lambda_affinity_itFtRmyk',
-               'downloadCmd': [None],
-               'filterCmd': [(None, 'run:./ffmpeg -y -ss {0} -t {1} -i "{2}" -f image2 -c:v png -r 24 '
-                                    '##TMPDIR##/{3}-filtered.{4}'), ('OK:RETVAL(0)', None)],
+    'decode': {'name': 'lambda_affinity_too6krJq',
+               'downloadCmd': [(None, 'run:./ffmpeg -y -ss {starttime} -t {duration} -i "{in_URL}" -f image2 -c:v png -r 24 '
+                                    '-start_number {start_number} ##TMPDIR##/%08d-filtered.png'),
+                             ('OK:RETVAL(0)', None)],
                'filterLoop': False,
-               'uploadCmd': [(None, "set:fromfile:##TMPDIR##/{0}-filtered.{3}"),
-                             ("OK:SET", "set:outkey:{1}/{2}.{3}"),
+               'filterCmd': [None],
+               'uploadCmd': [(None, "set:fromfile:##TMPDIR##/{number}-filtered.{extension}"),
+                             ("OK:SET", "set:outkey:{out_dir}/{number}.{extension}"),
                              ("OK:SET", "upload:"),
                              ('OK:UPLOAD(', None)
                              ],
                'outputFmt': 'frames'
-    }
+    },
+
+    'grayscale': {'name': 'lambda_affinity_too6krJq',
+                'downloadCmd': [(None, 'set:inkey:{in_dir}/{number}.{extension}'),
+                                ('OK:SET', 'set:targfile:##TMPDIR##/{number}.{extension}'),
+                                ('OK:SET', 'retrieve:'),
+                                ('OK:RETRIEV', None)],
+                'filterLoop': False,
+                'filterCmd': [(None, 'run:./ffmpeg -framerate 24 -start_number {start_number} -i ##TMPDIR##/%08d.png '
+                                     '-vf hue=s=0 -c:a copy -safe 0 -start_number {start_number} ##TMPDIR##/%08d-filtered.png'),
+                              ('OK:RETVAL(0)', None)],
+                'uploadCmd': [(None, "set:fromfile:##TMPDIR##/{number}-filtered.{extension}"),
+                             ("OK:SET", "set:outkey:{out_dir}/{number}.{extension}"),
+                             ("OK:SET", "upload:"),
+                             ('OK:UPLOAD(', None)
+                             ],
+                'outputFmt': 'frames'
+    },
+
+    'encode': {'name': 'lambda_affinity_too6krJq',
+                'downloadCmd': [(None, 'set:inkey:{in_dir}/{number}.{extension}'),
+                                ('OK:SET', 'set:targfile:##TMPDIR##/{number}.{extension}'),
+                                ('OK:SET', 'retrieve:'),
+                                ('OK:RETRIEV', None)],
+                'filterLoop': False,
+                'filterCmd': [(None, 'run:./ffmpeg -framerate 24 -start_number {start_number} -i ##TMPDIR##/%08d.png '
+                               '-c:v libx264 -pix_fmt yuv420p ##TMPDIR##/{number}-filtered.mp4'),
+                              ('OK:RETVAL(0)', None)],
+                'uploadCmd': [(None, "set:fromfile:##TMPDIR##/{number}-filtered.{extension}"),
+                             ("OK:SET", "set:outkey:{out_dir}/{number}.{extension}"),
+                             ("OK:SET", "upload:"),
+                             ('OK:UPLOAD(', None)
+                             ],
+                'outputFmt': 'range'
+              }
 }
 
 
@@ -33,7 +68,7 @@ class JobCoordinator(object):
     lambda_function = ""
     function_spec = {}
     regions = ["us-east-1"]
-    bucket = ""
+    bucket = "lixiang-lambda-test"
     in_format = ""
     in_chunks = None
     out_file = None
@@ -46,9 +81,9 @@ class JobCoordinator(object):
     srvcrt = None
     srvkey = None
 
-    ca_cert = ''
-    server_cert = ''
-    server_key = ''
+    ca_cert = '/home/aolx/devel/ssl/ca_cert.pem'
+    server_cert = '/home/aolx/devel/ssl/server_cert.pem'
+    server_key = '/home/aolx/devel/ssl/server_key.pem'
 
 
     def init(self, jobspec, ups, dns):
@@ -88,19 +123,19 @@ class UploadRunState(CommandListState):
 
     def __init__(self, prevState, aNum=0):
         super(UploadRunState, self).__init__(prevState, aNum)
-        # choose which key to run next
         if JobCoordinator.function_spec['outputFmt'] == 'frames':
             out_dir = '/'.join(JobCoordinator.dns[0]['URI'].split('/')[3:-1])
-            out_num = self.info['retrieve_iter'] + 1
-            global_out_num = 24 * self.actorNum + out_num
-            self.commands = [ s.format('%08d'%out_num, out_dir, '%08d'%global_out_num, JobCoordinator.out_format)
-                              if s is not None else None for s in self.commands ]
+            number = '%08d' % (24 * self.actorNum + self.info['upload_iter'] + 1)
+            extension = JobCoordinator.dns[0]['type']
+            params = {'out_dir': out_dir, 'number': number, 'extension': extension}
+            self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
         elif JobCoordinator.function_spec['outputFmt'] == 'range':
             out_dir = '/'.join(JobCoordinator.dns[0]['URI'].split('/')[3:-1])
-            out_num = 1
-            global_out_num = self.actorNum + out_num
-            self.commands = [ s.format('%08d'%out_num, out_dir, '%08d'%global_out_num, JobCoordinator.out_format)
-                              if s is not None else None for s in self.commands ]
+            number = '%08d' % (self.actorNum + 1)
+            extension = JobCoordinator.dns[0]['type']
+            params = {'out_dir': out_dir, 'number': number, 'extension': extension}
+            self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
+        # print 'uploadCommands:'
         # print (self.commands)
 
 
@@ -108,24 +143,26 @@ class UploadLoopState(ForLoopState):
     extra = "(upload loop)"
     loopState = UploadRunState
     exitState = QuitState
-    iterKey = "retrieve_iter"
+    iterKey = "upload_iter"
+    finKey = "upload_fin"
 
     def __init__(self, prevState, aNum=0):
         super(UploadLoopState, self).__init__(prevState, aNum)
-        # number of frames to retrieve is stored in ServerInfo object
-        if JobCoordinator.function_spec['outputFmt'] == 'range':
+        if JobCoordinator.function_spec['uploadCmd'] == [None]:
+            self.iterFin = 0
+        elif JobCoordinator.function_spec['outputFmt'] == 'range':
             self.iterFin = 1
         elif JobCoordinator.function_spec['outputFmt'] == 'frames':
-            self.iterFin = prevState.output_count
-            # tuples = JobCoordinator.ups[0]['tuples'][self.actorNum]
-            # if JobCoordinator.ups[0]['mode'] == 'frames':
-            #     self.iterFin = tuples[1] - tuples[0] + 1
-            # elif JobCoordinator.ups[0]['mode'] == 'range':
-            #     self.iterFin = int(math.ceil(tuples[1] - tuples[0]) * 24)
+            if self.info.get(self.finKey) is None:
+                print 'getting output count:', prevState.output_count
+                self.info[self.finKey] = prevState.output_count
+                self.iterFin = prevState.output_count
+            else:
+                self.iterFin = self.info[self.finKey]
 
 
 # need to set this here to avoid use-before-def
-UploadRunState.nextState = UploadLoopState # just for testing
+UploadRunState.nextState = UploadLoopState
 
 
 class CheckOutputState(OnePassState):
@@ -136,12 +173,15 @@ class CheckOutputState(OnePassState):
     output_count = 0
 
     def post_transition(self):
-        output_count = self.messages[-1].count('\n')
+        self.output_count = self.messages[-1].count('\n')
+        print self.messages[-1]
         return self.nextState(self)
 
+    def __str__(self):
+        return "%d:%s, %d outputs" % (self.actorNum, self.str_extra(), self.output_count)
 
 class GetOutputState(OnePassState):
-    extra = "(ls output)"
+    extra = "(find output)"
     command = "run:find ##TMPDIR##/ -type f -name '*-filtered.png'"
     expect = None
     nextState = CheckOutputState
@@ -153,29 +193,28 @@ class FilterRunState(CommandListState):
 
     def __init__(self, prevState, aNum=0):
         super(FilterRunState, self).__init__(prevState, aNum)
-
-        start = JobCoordinator.ups[0]['tuples'][self.actorNum][0]
-        duration = JobCoordinator.ups[0]['tuples'][self.actorNum][1] - start
-        in_URI = JobCoordinator.ups[0]['URI']
-        ftype = JobCoordinator.out_format
-        self.commands = [ s.format(start, duration, in_URI, "%08d", ftype) if s is not None else None for s in self.commands ]
-        # print (self.commands)
+        start_number = '%08d' % (24 * self.actorNum + 1)
+        number = '%08d' % (self.actorNum + 1)
+        params = {'start_number': start_number, 'number': number}
+        self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
+        print (self.commands)
 
 
 class FilterLoopState(ForLoopState):
     extra = "(filter loop)"
     loopState = FilterRunState
     exitState = GetOutputState
-    iterKey = "retrieve_iter"
+    iterKey = "filter_iter"
+    finKey = "filter_fin"
 
     def __init__(self, prevState, aNum=0):
         super(FilterLoopState, self).__init__(prevState, aNum)
-        # number of frames to retrieve is stored in ServerInfo object
-        if JobCoordinator.function_spec['filterLoop']:
+        if JobCoordinator.function_spec['filterCmd'] == [None]:
+            self.iterFin = 0
+        elif not JobCoordinator.function_spec['filterLoop']:
             self.iterFin = 1
         else:
-            tuples = JobCoordinator.ups[0]['tuples'][self.actorNum]
-            self.iterFin = tuples[1] - tuples[0] + 1
+            pass  # need to figure out output num of last state
 
 # need to set this here to avoid use-before-def
 FilterRunState.nextState = FilterLoopState
@@ -189,23 +228,36 @@ class DownloadRunState(CommandListState):
         super(DownloadRunState, self).__init__(prevState, aNum)
         # choose which key to run next
         if JobCoordinator.ups[0]['mode'] == 'frames':
-            self.commands = [ s.format(0) if s is not None else None for s in self.commands ]
+            in_dir = '/'.join(JobCoordinator.ups[0]['URI'].split('/')[3:-1])
+            number = '%08d' % (24 * self.actorNum + self.info['download_iter'] + 1)
+            extension = JobCoordinator.ups[0]['type']
+            params = {'in_dir': in_dir, 'number': number, 'extension': extension}
+            self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
         elif JobCoordinator.ups[0]['mode'] == 'range':
-            self.commands = [ s.format(0) if s is not None else None for s in self.commands ]
+            starttime = JobCoordinator.ups[0]['tuples'][self.actorNum][0]
+            duration = JobCoordinator.ups[0]['tuples'][self.actorNum][1] - starttime
+            in_URI = JobCoordinator.ups[0]['URI']
+            start_number = '%08d' % (24 * self.actorNum + 1)
+            params = {'starttime': starttime, 'duration': duration, 'in_URL': in_URI, 'start_number': start_number}
+            self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
+
 
 
 class DownloadLoopState(ForLoopState):
     extra = "(retrieve loop)"
     loopState = DownloadRunState
     exitState = FilterLoopState
-    iterKey = "retrieve_iter"
+    iterKey = "download_iter"
+    finKey = "download_fin"
 
     def __init__(self, prevState, aNum=0):
         super(DownloadLoopState, self).__init__(prevState, aNum)
         # number of frames to retrieve is stored in ServerInfo object
-        if JobCoordinator.function_spec['downloadCmd'] == [None]:  # use ffmpeg to retrieve
+        if JobCoordinator.function_spec['downloadCmd'] == [None]:
             self.iterFin = 0
+        elif JobCoordinator.ups[0]['mode'] == 'range':
+            self.iterFin = 1
         else:
             tuples = JobCoordinator.ups[0]['tuples'][self.actorNum]
             self.iterFin = tuples[1] - tuples[0] + 1
