@@ -154,7 +154,7 @@ class UploadLoopState(ForLoopState):
             self.iterFin = 1
         elif JobCoordinator.function_spec['outputFmt'] == 'frames':
             if self.info.get(self.finKey) is None:
-                print 'getting output count:', prevState.output_count
+                # print 'getting output count:', prevState.output_count
                 self.info[self.finKey] = prevState.output_count
                 self.iterFin = prevState.output_count
             else:
@@ -174,7 +174,7 @@ class CheckOutputState(OnePassState):
 
     def post_transition(self):
         self.output_count = self.messages[-1].count('\n')
-        print self.messages[-1]
+        # print self.messages[-1]
         return self.nextState(self)
 
     def __str__(self):
@@ -197,7 +197,7 @@ class FilterRunState(CommandListState):
         number = '%08d' % (self.actorNum + 1)
         params = {'start_number': start_number, 'number': number}
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
-        print (self.commands)
+        # print (self.commands)
 
 
 class FilterLoopState(ForLoopState):
@@ -297,9 +297,9 @@ def submit(taskspec, upstreams, downstreams):
                                      , '-c', JobCoordinator.ca_cert
                                      , '-s', JobCoordinator.server_cert
                                      , '-k', JobCoordinator.server_key
-                                     , '-D'
-                                     , '-O', 'states_output'
-                                     , '-P', 'prof_output'
+                                     #, '-D'
+                                     , '-O', 'states_output_'+taskspec['operator']
+                                     , '-P', 'prof_output_'+taskspec['operator']
                                      ])
 
     # launch the lambdas

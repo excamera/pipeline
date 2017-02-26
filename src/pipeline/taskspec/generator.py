@@ -1,7 +1,11 @@
 #!/usr/bin/python
 
 import logging
+import random
+import string
+
 import simplejson as json
+from time import localtime, strftime
 
 
 logger = logging.getLogger(__name__)
@@ -9,6 +13,8 @@ logger.addHandler(logging.NullHandler())
 
 
 class Generator(object):
+
+    base_s3_dir = 's3://lixiang-lambda-test/'
 
     @staticmethod
     def parse(pipeline):
@@ -21,22 +27,68 @@ class Generator(object):
         return ppl
 
     @staticmethod
-    def generate(ppl):
-        jobspecs = []
+    def generate(input, output=None, commands=[]):
+        pipeline = {}
+
+        pipeline['pipeid'] = strftime("%Y%m%d%H%M%S", localtime()) + ''.join(random.choice(string.ascii_uppercase) for _ in range(6))
+
+        # create channels
+        pipeline['channels'] = []
+
+        for i in range(len(commands)+3):  # input, decoded, filtered[noprs], encoded
+            pipeline['channels'].append({'channel': i,
+                                         'URI': Generator.base_s3_dir+'temp/'+pipeline['pipeid']+'/'+str(i)+'/%08d.png',
+                                         'type': 'png',
+                                         'nchunks': None
+                                         })
+
+        pipeline['channels'][0]['URI'] = input
+        extension = input[input.rfind('.')+1:]
+        if extension in ['mp4', 'mkv', 'avi', 'mov', 'png', 'jpg', 'bmp']:
+            pipeline['channels'][0]['type'] = extension
+        else:
+            pipeline['channels'][0]['type'] = None  # implicit type
+
+        pipeline['channels'][0]['src'] = 'src'
+
+        if output == None:
+            pipeline['channels'][-1]['URI'] = Generator.base_s3_dir+'output/'+pipeline['pipeid']+'/%08d.mp4'
+            pipeline['channels'][-1]['type'] = 'mp4'
+
+        # create nodes
+        pipeline['nodes'] = []
+
+        pipeline['nodes'].append({'node': 0,
+                                  'upstream': [0],
+                                  'downstream': [1],
+                                  'operator':'decode',
+                                  'command':[]
+                                  })
+
+        for i in range(len(commands)):
+            pipeline['nodes'].append({'node': i+1,
+                                      'upstream': [i+1],
+                                      'downstream': [i+2],
+                                      'operator': commands[i][0],
+                                      'command': commands[i][1]
+                                      })
+
+        pipeline['nodes'].append({'node': len(commands)+1,
+                                  'upstream': [len(commands)+1],
+                                  'downstream': [len(commands)+2],
+                                  'operator':'encode',
+                                  'command':[]
+                                  })
 
         # connect the channels
 
-        for n in ppl['nodes']:
+        for n in pipeline['nodes']:
             for ups in n['upstream']:
-                ppl['channels'][ups]['dest'] = n['node']
+                pipeline['channels'][ups]['dest'] = n['node']
             for dns in n['downstream']:
-                ppl['channels'][dns]['src'] = n['node']
+                pipeline['channels'][dns]['src'] = n['node']
 
-        for c in ppl['channels']:
-            if c['URI'].startswith('channel'):  # materialize temp channels
-                c['URI'] = 's3://lixiang-lambda-test/temp/' + ppl['pipeid'] + '/' + c['URI'][c['URI'].index('://') + 3:]
-                c['URI'] = c['URI'] % (str(c['channel']), '%s')
-
+        for c in pipeline['channels']:
             if c['src'] == 'src':
                 c['ready'] = True
             else:
@@ -47,11 +99,11 @@ class Generator(object):
             #    c['nchunks'] = ppl['nodes'][c['dest']]['nworkers']  # for source nodes, determine nchunk by nworker
             #    ppl['nodes'][c['dest']]['nchunks'] = c['nchunks']
 
-        return ppl
+        return pipeline
 
         # then decide the nchunk of each channel and node
 
-        
+
         #remain = True
         #while remain:
         #    remain = False
@@ -119,23 +171,4 @@ class Generator(object):
         # return jobspecs
 
 
-if __name__ == '__main__':
-
-    pipe = '''{
-            "pipeid" : "sjf2JY1f",
-            "channels" :
-                [
-                    {"channel":0, "URI":"s3://lixiang-lambda-test/input/%08d.png", "nchunks":null, "type":"png", "src":"src", "dest":null},
-                    {"channel":1, "URI":"s3://lixiang-lambda-test/output/%08d.png", "nchunks":null, "type":"mp4", "src":null, "dest":"dest"}
-                ],
-            "nodes" :
-                [
-                    {"node":0, "upstream":[0], "downstream":[1], "nworkers":10, "nchunks":null, "amplification":1, "engine": "aws-lambda", "operator": "crawlingtext", "command":[]}
-                ]
-        }'''
-
-    gen = Generator()
-    ppl = gen.parse(pipe)
-    jobspecs = gen.generate(ppl)
-    print json.dumps(jobspecs, indent=True)
 
