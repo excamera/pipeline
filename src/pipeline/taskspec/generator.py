@@ -76,7 +76,7 @@ class Generator(object):
         pipeline['nodes'].append({'node': len(commands)+1,
                                   'upstream': [len(commands)+1],
                                   'downstream': [len(commands)+2],
-                                  'operator':'encode',
+                                  'operator':'encode_dash',
                                   'command':[]
                                   })
 

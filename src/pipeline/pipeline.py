@@ -8,6 +8,5 @@ import simplejson as json
 
 
 if __name__=='__main__':
-    pipeline = Generator.generate('s3://lixiang-lambda-test/sintel.mp4', commands=[('grayscale', [])])
-    #print json.dumps(pipeline, indent=True)
+    pipeline = Generator.generate('s3://lixiang-lambda-test/5s.mp4', commands=[('grayscale', [])])
     JobManager.submit(pipeline)
