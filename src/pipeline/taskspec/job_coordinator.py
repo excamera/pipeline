@@ -206,6 +206,7 @@ class CheckOutputState(OnePassState):
     def __str__(self):
         return "%d:%s, %d outputs" % (self.actorNum, self.str_extra(), self.output_count)
 
+
 class GetOutputState(OnePassState):
     extra = "(find output)"
     command = "run:find ##TMPDIR##/ -type f -name '*-filtered.png'"
@@ -267,7 +268,6 @@ class DownloadRunState(CommandListState):
             start_number = '%08d' % (24 * self.actorNum + 1)
             params = {'starttime': starttime, 'duration': duration, 'in_URL': in_URI, 'start_number': start_number}
             self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
-
 
 
 class DownloadLoopState(ForLoopState):
@@ -338,7 +338,11 @@ def submit(taskspec, upstreams, downstreams):
             , "srvkey": JobCoordinator.srvkey
             , "bucket": JobCoordinator.bucket
             }
-    server.server_launch(JobCoordinator, event, os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'])
+    try:
+        server.server_launch(JobCoordinator, event, os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'])
+    except SystemExit:
+        pass
 
     # run the server
+    print "running task:" + str(taskspec)
     run()

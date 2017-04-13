@@ -9,7 +9,6 @@ from util import media_probe
 from taskspec import job_coordinator
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 
 class JobManager(object):
@@ -19,6 +18,7 @@ class JobManager(object):
         if channel['type'] in ['mp4', 'mkv', 'avi', 'mov']: # video, use ffprobe to get length
             signed_URI = media_probe.get_signed_URI(channel['URI']) # currently only single video for all workers
             duration = media_probe.get_duration(signed_URI)
+            channel['duration'] = duration
             if nchunks is None:
                 nchunks = int(math.ceil(duration)) # an approximation to 1s/chunk
             # currently fix chunk size to 1s of video except for the last chunk

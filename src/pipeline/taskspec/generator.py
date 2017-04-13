@@ -35,7 +35,7 @@ class Generator(object):
         # create channels
         pipeline['channels'] = []
 
-        for i in range(len(commands)+3):  # input, decoded, filtered[noprs], encoded
+        for i in range(len(commands)+3):  # input, decoded, filtered[n-ops], encoded
             pipeline['channels'].append({'channel': i,
                                          'URI': Generator.base_s3_dir+'temp/'+pipeline['pipeid']+'/'+str(i)+'/%08d.png',
                                          'type': 'png',
@@ -54,6 +54,8 @@ class Generator(object):
         if output == None:
             pipeline['channels'][-1]['URI'] = Generator.base_s3_dir+'output/'+pipeline['pipeid']+'/%08d.mp4'
             pipeline['channels'][-1]['type'] = 'mp4'
+            pipeline['channels'][-1]['output_mpd'] = Generator.base_s3_dir+'output/'+pipeline['pipeid']+'/output.mpd'
+            pipeline['channels'][-1]['baseURL'] = Generator.base_s3_dir+'output/'+pipeline['pipeid']+'/'
 
         # create nodes
         pipeline['nodes'] = []
