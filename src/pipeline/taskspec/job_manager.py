@@ -4,18 +4,20 @@ import sys
 import math
 import logging
 import simplejson as json
+import pdb
 
 from util import media_probe
 from taskspec import job_coordinator
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 class JobManager(object):
 
     @staticmethod
     def get_inputchunks(channel, nchunks=None, nframes=None):
-        if channel['type'] in ['mp4', 'mkv', 'avi', 'mov']: # video, use ffprobe to get length
+        if channel['type'] in ['mp4', 'mkv', 'avi', 'mov', None]: # default video, use ffprobe to get length
             signed_URI = media_probe.get_signed_URI(channel['URI']) # currently only single video for all workers
             duration = media_probe.get_duration(signed_URI)
             channel['duration'] = duration
