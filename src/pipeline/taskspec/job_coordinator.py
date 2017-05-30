@@ -1,14 +1,13 @@
 #!/usr/bin/python
 import os
 import logging
-
+import threading
+from time import localtime, strftime, sleep
 from libmu import server, TerminalState, CommandListState, ForLoopState, OnePassState
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 lambda_function_map = {
-    'decode': {'name': 'lambda_affinity_Jbsw8CDs',
+    'decode': {'name': 'lambda_test_397Z91UC',
                'downloadCmd': [(None, 'run:./ffmpeg -y -ss {starttime} -t {duration} -i "{in_URL}" -f image2 -c:v png -r 24 '
                                     '-start_number {start_number} ##TMPDIR##/%08d-filtered.png'),
                              ('OK:RETVAL(0)', None)],
@@ -22,7 +21,7 @@ lambda_function_map = {
                'outputFmt': 'frames'
     },
 
-    'grayscale': {'name': 'lambda_affinity_Jbsw8CDs',
+    'grayscale': {'name': 'lambda_test_397Z91UC',
                 'downloadCmd': [(None, 'set:inkey:{in_dir}/{number}.{extension}'),
                                 ('OK:SET', 'set:targfile:##TMPDIR##/{number}.{extension}'),
                                 ('OK:SET', 'retrieve:'),
@@ -39,7 +38,7 @@ lambda_function_map = {
                 'outputFmt': 'frames'
     },
 
-    'encode': {'name': 'lambda_affinity_Jbsw8CDs',
+    'encode': {'name': 'lambda_test_397Z91UC',
                 'downloadCmd': [(None, 'set:inkey:{in_dir}/{number}.{extension}'),
                                 ('OK:SET', 'set:targfile:##TMPDIR##/{number}.{extension}'),
                                 ('OK:SET', 'retrieve:'),
@@ -56,7 +55,7 @@ lambda_function_map = {
                 'outputFmt': 'range'
               },
 
-    'encode_dash': {'name': 'lambda_affinity_Jbsw8CDs',
+    'encode_dash': {'name': 'lambda_test_397Z91UC',
                     'downloadCmd': [(None, 'set:inkey:{in_dir}/{number}.{extension}'),
                                     ('OK:SET', 'set:targfile:##TMPDIR##/{number}.{extension}'),
                                     ('OK:SET', 'retrieve:'),
@@ -82,7 +81,6 @@ lambda_function_map = {
                    }
 
 }
-
 
 class JobCoordinator(object):
     port_number = 13579
@@ -161,8 +159,6 @@ class UploadRunState(CommandListState):
             extension = JobCoordinator.dns[0]['type']
             params = {'out_dir': out_dir, 'number': number, 'extension': extension}
             self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
-        # print 'uploadCommands:'
-        # print (self.commands)
 
 
 class UploadLoopState(ForLoopState):
@@ -180,7 +176,6 @@ class UploadLoopState(ForLoopState):
             self.iterFin = 1
         elif JobCoordinator.function_spec['outputFmt'] == 'frames':
             if self.info.get(self.finKey) is None:
-                # print 'getting output count:', prevState.output_count
                 self.info[self.finKey] = prevState.output_count
                 self.iterFin = prevState.output_count
             else:
@@ -200,7 +195,6 @@ class CheckOutputState(OnePassState):
 
     def post_transition(self):
         self.output_count = self.messages[-1].count('\n')
-        # print self.messages[-1]
         return self.nextState(self)
 
     def __str__(self):
@@ -224,7 +218,6 @@ class FilterRunState(CommandListState):
         number = '%08d' % (self.actorNum + 1)
         params = {'start_number': start_number, 'number': number}
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
-        # print (self.commands)
 
 
 class FilterLoopState(ForLoopState):
@@ -309,7 +302,6 @@ class ConfigState(CommandListState):
         FilterRunState.commandlist = JobCoordinator.function_spec['filterCmd']
         UploadRunState.commandlist = JobCoordinator.function_spec['uploadCmd']
 
-
 def run():
     server.server_main_loop([], ConfigState, JobCoordinator)
 
@@ -317,14 +309,15 @@ def run():
 def submit(taskspec, upstreams, downstreams):
     jc = JobCoordinator()
     jc.init(taskspec, upstreams, downstreams)
+    JobCoordinator.port_number = JobCoordinator.port_number + int(taskspec['node'])
     server.options2(JobCoordinator, ['-b', JobCoordinator.bucket
                                      , '-n', JobCoordinator.num_parts
                                      , '-f', JobCoordinator.num_frames
                                      , '-c', JobCoordinator.ca_cert
                                      , '-s', JobCoordinator.server_cert
                                      , '-k', JobCoordinator.server_key
-                                     #, '-D'
-                                     , '-O', 'states_output_'+taskspec['operator']
+                                     , '-D'
+                                     , '-O', 'states_output_'+taskspec['operator']+'_'+strftime("%m%d%H%M%S", localtime())
                                      , '-P', 'prof_output_'+taskspec['operator']
                                      ])
 
@@ -333,16 +326,20 @@ def submit(taskspec, upstreams, downstreams):
             , "port": JobCoordinator.port_number
             , "addr": None  # server_launch will fill this in for us
             , "nonblock": 0
-            , "cacert": JobCoordinator.cacert
+            #, "cacert": JobCoordinator.cacert
             , "srvcrt": JobCoordinator.srvcrt
             , "srvkey": JobCoordinator.srvkey
             , "bucket": JobCoordinator.bucket
             }
-    try:
-        server.server_launch(JobCoordinator, event, os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'])
-    except SystemExit:
-        pass
-
+    logging.info("running task:" + str(taskspec))
+    ready_event = threading.Event()
+    JobCoordinator.ready_event = ready_event
+    t = threading.Thread(target=run)
+    t.daemon = False
+    t.start()
+    ready_event.wait()
+    sleep(0.2)
+    logging.info("sending lambda invoke requests")
+    server.server_launch(JobCoordinator, event, os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'])
+    t.join()
     # run the server
-    print "running task:" + str(taskspec)
-    run()
