@@ -3,8 +3,8 @@ import os
 import logging
 import threading
 from time import localtime, strftime, sleep
-from libmu import server, TerminalState, CommandListState, ForLoopState, OnePassState
-
+from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
+import libmu
 
 lambda_function_map = {
     'decode': {'name': 'lambda_test_397Z91UC',
@@ -125,6 +125,10 @@ class JobCoordinator(object):
 
         JobCoordinator.in_format = ups[0]['type']
         JobCoordinator.out_format = dns[0]['type']
+
+        # JobCoordinator.ca_cert = libmu.util.read_pem(JobCoordinator.ca_cert)
+        JobCoordinator.srvcrt = libmu.util.read_pem(JobCoordinator.server_cert)
+        JobCoordinator.srvkey = libmu.util.read_pem(JobCoordinator.server_key)
 
     def status(self):
         pass
@@ -302,44 +306,34 @@ class ConfigState(CommandListState):
         FilterRunState.commandlist = JobCoordinator.function_spec['filterCmd']
         UploadRunState.commandlist = JobCoordinator.function_spec['uploadCmd']
 
-def run():
-    server.server_main_loop([], ConfigState, JobCoordinator)
-
 
 def submit(taskspec, upstreams, downstreams):
     jc = JobCoordinator()
     jc.init(taskspec, upstreams, downstreams)
-    JobCoordinator.port_number = JobCoordinator.port_number + int(taskspec['node'])
-    server.options2(JobCoordinator, ['-b', JobCoordinator.bucket
-                                     , '-n', JobCoordinator.num_parts
-                                     , '-f', JobCoordinator.num_frames
-                                     , '-c', JobCoordinator.ca_cert
-                                     , '-s', JobCoordinator.server_cert
-                                     , '-k', JobCoordinator.server_key
-                                     , '-D'
-                                     , '-O', 'states_output_'+taskspec['operator']+'_'+strftime("%m%d%H%M%S", localtime())
-                                     , '-P', 'prof_output_'+taskspec['operator']
-                                     ])
 
     # launch the lambdas
     event = { "mode": 1
             , "port": JobCoordinator.port_number
             , "addr": None  # server_launch will fill this in for us
             , "nonblock": 0
-            #, "cacert": JobCoordinator.cacert
+            #, "cacert": libmu.util.read_pem(cacertfile)
             , "srvcrt": JobCoordinator.srvcrt
             , "srvkey": JobCoordinator.srvkey
             , "bucket": JobCoordinator.bucket
             }
     logging.info("running task:" + str(taskspec))
-    ready_event = threading.Event()
-    JobCoordinator.ready_event = ready_event
-    t = threading.Thread(target=run)
-    t.daemon = False
-    t.start()
-    ready_event.wait()
-    sleep(0.2)
-    logging.info("sending lambda invoke requests")
-    server.server_launch(JobCoordinator, event, os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'])
-    t.join()
-    # run the server
+    tasks = []
+    for i in range(JobCoordinator.num_parts):
+        tasks.append(tracker.Task(JobCoordinator.lambda_function, ConfigState, i, event))
+
+    for t in tasks:
+        tracker.Tracker.submit(t)
+
+    while len(tasks) > 0:
+        sleep(1)
+        error_task = [t for t in tasks if isinstance(t.current_state, ErrorState)]
+        if len(error_task) > 0:
+            logging.error(str(len(error_task))+"tasks failed")
+            raise Exception(str(len(error_task))+"tasks failed")
+        tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
+        logging.debug(str(len(tasks))+" tasks still running")

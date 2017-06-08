@@ -27,9 +27,10 @@ class Generator(object):
         return ppl
 
     @staticmethod
-    def generate(input, output=None, commands=[]):
+    def generate(input, output=None, commands=None):
         pipeline = {}
 
+        commands = [] if commands is None else commands
         pipeline['pipeid'] = strftime("%Y%m%d%H%M%S", localtime()) + ''.join(random.choice(string.ascii_uppercase) for _ in range(6))
 
         # create channels
