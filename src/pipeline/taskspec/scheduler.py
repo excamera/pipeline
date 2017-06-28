@@ -56,8 +56,10 @@ class FifoScheduler(object):
                 break
 
             if time.time() > last_print+1:
-                logging.debug('current tasks:'+str(tasks))
+                logging.debug('current tasks:'+str([str(t) for t in tasks]))
                 last_print = time.time()
-            time.sleep(0.01)
+            time.sleep(0.001)
+            # sleep to avoid spin wait, this may increase overall latency by at most n*0.001 second,
+            # where n is length of pipeline
 
         logging.info('finish scheduling pipeline')

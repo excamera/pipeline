@@ -10,7 +10,7 @@ class FinalState(TerminalState):
 class EmitState(CommandListState):
     extra = "(emit output)"
     nextState = FinalState
-    commandlist = [ (None, "quit:")
+    commandlist = [ ('OK:UPLOAD', "quit:")
                   ]
 
     def __init__(self, prevState):
@@ -27,8 +27,9 @@ class RunState(CommandListState):
     nextState = EmitState
     commandlist = [ (None, 'run:./ffmpeg -y -ss {starttime} -t {duration} -i "{URL}" -f image2 -c:v png -r 24 '
                                     '-start_number 1 ##TMPDIR##/%08d.png')
-                  , ('OK:RETVAL(0)', 'run:aws s3 cp ##TMPDIR##/ {out_key} --recursive')
-                  , ('OK:RETVAL(0)', None)
+                  , ('OK:RETVAL(0)', 'set:fromfile:##TMPDIR##/00000001.png')
+                  , ('OK:', 'set:outkey:{out_key}/00000001.png')
+                  , ('OK:', 'upload:')
                     ]
 
     def __init__(self, prevState):
@@ -46,6 +47,7 @@ class InitState(CommandListState):
     extra = "(configuring)"
     nextState = RunState
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
+                  , "set:bucket:lixiang-pipeline"
                   , "run:rm -rf /tmp/*"
                   , "run:mkdir -p ##TMPDIR##"
                   , None
@@ -54,5 +56,5 @@ class InitState(CommandListState):
     def __init__(self, prevState, in_events, out_queue):
         super(InitState, self).__init__(prevState, in_events=in_events)
         self.out_queue = out_queue
-        self.out_key = 's3://lixiang-pipeline/encode/'+libmu.util.rand_str(16)
+        self.out_key = 'decode/'+libmu.util.rand_str(16)
         logging.debug('in_events: '+str(in_events)+', out_queue: '+str(out_queue))

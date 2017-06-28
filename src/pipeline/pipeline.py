@@ -83,6 +83,9 @@ def invoke2(url):
     FifoScheduler.schedule(pipe)
     logging.info('pipeline finished')
 
+    while not output.empty():
+        logging.debug(output.get(block=False))
+
     # os.system('aws s3 cp ' + pipe['channels'][-1]['baseURL'] + '00000001_dash.mpd ' + '.')
     # logging.info('mpd downloaded')
     # with open('00000001_dash.mpd', 'r') as fin:
