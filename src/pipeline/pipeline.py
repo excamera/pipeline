@@ -10,9 +10,9 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__))+'/../../external/mu/
 import libmu.util
 from taskspec.job_manager import JobManager
 from taskspec.pipeline import Pipeline
-from taskspec.scheduler import FifoScheduler
+from taskspec.scheduler import SimpleScheduler
 from util import media_probe
-from stages import decode
+from stages import decode, encode
 from util.amend_mpd import amend_mpd
 from util.media_probe import get_signed_URI
 
@@ -71,40 +71,22 @@ def invoke2(url):
 
     output = Queue.Queue()
     pipe = Pipeline()
-    pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_pmzSrrUL', decode.InitState, default_event))
-    pipe.add_downstream('decode', output, 'out_0')
+    pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_WlgU5cKP', decode.InitState, default_event))
+    pipe.add_stage(Pipeline.Stage('encode', 'lambda_test_WlgU5cKP', encode.InitState, default_event))
+    pipe.add_downstream('decode', 'encode', 'frames')
+    pipe.add_downstream('encode', output, 'chunks')
 
     signed_URI = media_probe.get_signed_URI(url)  # currently only single video for all workers
     duration = media_probe.get_duration(signed_URI)
     for i in range(int(math.ceil(duration))):
-        inevent = {'segment': i, 'URL': signed_URI, 'starttime': i, 'duration': 1}
-        pipe.stages['decode'].buffer_queue.put(inevent)
+        inevent = {'segment': i, 'key': signed_URI, 'starttime': i, 'duration': 1}
+        pipe.stages['decode'].buffer_queue.put({'video_url': inevent})
 
-    FifoScheduler.schedule(pipe)
+    SimpleScheduler.schedule(pipe)
     logging.info('pipeline finished')
 
     while not output.empty():
         logging.debug(output.get(block=False))
-
-    # os.system('aws s3 cp ' + pipe['channels'][-1]['baseURL'] + '00000001_dash.mpd ' + '.')
-    # logging.info('mpd downloaded')
-    # with open('00000001_dash.mpd', 'r') as fin:
-    #     init_mpd = fin.read()
-    #
-    # duration = pipe['channels'][0]['duration']
-    # baseURL = pipe['channels'][-1]['baseURL']
-    # num_m4s = int(math.ceil(duration))
-    # final_mpd = amend_mpd(init_mpd, duration, baseURL, num_m4s)
-    #
-    # logging.info('mpd amended')
-    # with open('output.xml', 'wb') as fout:
-    #     fout.write(final_mpd)
-    #
-    # os.system('aws s3 cp output.xml ' + pipe['channels'][-1]['baseURL'])
-    # logging.info('mpd uploaded')
-    # signed_mpd = get_signed_URI(pipe['channels'][-1]['baseURL'] + 'output.xml')
-    # logging.info('mpd siged, returing')
-    # return signed_mpd, None
 
 
 if __name__=='__main__':

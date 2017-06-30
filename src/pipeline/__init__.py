@@ -1,1 +1,1 @@
-__all__ = ['pipeline', 'coordinator', 'jobspec', 'taskspec', 'util']
+__all__ = ['pipeline', 'coordinator', 'jobspec', 'taskspec', 'stages', 'util']

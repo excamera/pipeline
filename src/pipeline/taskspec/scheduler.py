@@ -10,11 +10,12 @@ from libmu.machine_state import ErrorState, TerminalState
 
 
 def default_deliver_func(buffer_queue, deliver_queue):
+    """deliver every event from buffer_queue, change event from output to input"""
     while True:
         try:
             event = buffer_queue.get(block=False)
             deliver_queue.put(event)
-            logging.debug('moving event from buffer to deliver queue')
+            logging.debug('move an event from buffer to deliver queue')
         except Queue.Empty:
             logging.debug('finish moving, returning')
             break
@@ -26,8 +27,8 @@ def print_task_states(tasks):
         logging.info(str([str(t) for t in tasks[i:i+4]]))
 
 
-class FifoScheduler(object):
-
+class SimpleScheduler(object):
+    """A simple scheduler that scans every stage for events and submit any available tasks"""
     @classmethod
     def schedule(cls, pipeline):
         logging.info('start scheduling pipeline')
@@ -65,7 +66,7 @@ class FifoScheduler(object):
                 print_task_states(tasks)
                 last_print = time.time()
             time.sleep(0.001)
-            # sleep to avoid spin wait, this may increase overall latency by at most n*0.001 second,
-            # where n is length of pipeline
+            # sleep to avoid spin wait, we can use notification instead, but so far, this works
+            # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
 
         logging.info('finish scheduling pipeline')

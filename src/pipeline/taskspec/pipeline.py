@@ -33,6 +33,8 @@ class Pipeline(object):
     def add_downstream(self, src_stage, downstream, key):
         if not isinstance(src_stage, Pipeline.Stage):
             src_stage = self.stages[src_stage]
+        if isinstance(downstream, basestring):
+            downstream = self.stages[downstream]
         if isinstance(downstream, Pipeline.Stage):
-            downstream = self.stages[downstream].buffer_queue
+            downstream = downstream.buffer_queue
         src_stage.downstreams[key] = downstream
