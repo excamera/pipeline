@@ -71,7 +71,7 @@ def invoke2(url):
 
     output = Queue.Queue()
     pipe = Pipeline()
-    pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_397Z91UC', decode.InitState, default_event))
+    pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_pmzSrrUL', decode.InitState, default_event))
     pipe.add_downstream('decode', output, 'out_0')
 
     signed_URI = media_probe.get_signed_URI(url)  # currently only single video for all workers

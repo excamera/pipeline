@@ -20,6 +20,12 @@ def default_deliver_func(buffer_queue, deliver_queue):
             break
 
 
+def print_task_states(tasks):
+    logging.info(str(len(tasks))+' tasks running:')
+    for i in range(0, len(tasks), 4):
+        logging.info(str([str(t) for t in tasks[i:i+4]]))
+
+
 class FifoScheduler(object):
 
     @classmethod
@@ -56,7 +62,7 @@ class FifoScheduler(object):
                 break
 
             if time.time() > last_print+1:
-                logging.debug('current tasks:'+str([str(t) for t in tasks]))
+                print_task_states(tasks)
                 last_print = time.time()
             time.sleep(0.001)
             # sleep to avoid spin wait, this may increase overall latency by at most n*0.001 second,
