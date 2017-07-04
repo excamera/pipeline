@@ -1,2 +1,2 @@
-__all__ = ['decode']
+__all__ = ['util', 'decode', 'encode']
 

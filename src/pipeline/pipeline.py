@@ -11,6 +11,7 @@ import libmu.util
 from taskspec.job_manager import JobManager
 from taskspec.pipeline import Pipeline
 from taskspec.scheduler import SimpleScheduler
+from taskspec.generator import Generator
 from util import media_probe
 from stages import decode, encode
 from util.amend_mpd import amend_mpd
@@ -20,7 +21,7 @@ import simplejson as json
 import pdb
 import logging
 
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)d - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)d - %(message)s")
 
 config = defaultdict(lambda: None)
 
@@ -37,6 +38,7 @@ default_event = {"mode": 1
     , 'srvcrt': libmu.util.read_pem(config['srvcrt_file']) if config['srvcrt_file'] is not None else None
     , 'srvkey': libmu.util.read_pem(config['srvkey_file']) if config['srvkey_file'] is not None else None
          }
+
 
 def invoke(url, commands):
     logging.info('entering pipeline.invoke()')
@@ -76,20 +78,29 @@ def invoke2(url):
     pipe.add_downstream('decode', 'encode', 'frames')
     pipe.add_downstream('encode', output, 'chunks')
 
+    handler = logging.FileHandler(pipe.pipe_id+'.csv')
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter('%(created)f, %(message)s'))
+    logger = logging.getLogger(pipe.pipe_id)
+    logger.propagate = False
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+
     signed_URI = media_probe.get_signed_URI(url)  # currently only single video for all workers
     duration = media_probe.get_duration(signed_URI)
     for i in range(int(math.ceil(duration))):
-        inevent = {'segment': i, 'key': signed_URI, 'starttime': i, 'duration': 1}
-        pipe.stages['decode'].buffer_queue.put({'video_url': inevent})
+        inevent = {'key': signed_URI, 'starttime': i, 'duration': 1}
+        pipe.stages['decode'].buffer_queue.put({'lineage': str(i), 'video_url': inevent, 'pipe_id': pipe.pipe_id})
 
+    logger.info('starting pipeline')
     SimpleScheduler.schedule(pipe)
-    logging.info('pipeline finished')
+    logger.info('pipeline finished')
 
     while not output.empty():
         logging.debug(output.get(block=False))
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     url_list = subprocess.check_output('youtube-dl --get-url '+sys.argv[1], stderr=subprocess.STDOUT, shell=True).split('\n')
     for u in url_list:
         if u.startswith('http'):

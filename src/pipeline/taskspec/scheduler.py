@@ -22,9 +22,10 @@ def default_deliver_func(buffer_queue, deliver_queue):
 
 
 def print_task_states(tasks):
-    logging.info(str(len(tasks))+' tasks running:')
+    out_msg = str(len(tasks))+' tasks running:\n'
     for i in range(0, len(tasks), 4):
-        logging.info(str([str(t) for t in tasks[i:i+4]]))
+        out_msg += str([str(t) for t in tasks[i:i+4]])+'\n'
+    logging.info(out_msg)
 
 
 class SimpleScheduler(object):
@@ -66,7 +67,7 @@ class SimpleScheduler(object):
                 print_task_states(tasks)
                 last_print = time.time()
             time.sleep(0.001)
-            # sleep to avoid spin wait, we can use notification instead, but so far, this works
+            # sleep to avoid spinning, we can use notification instead, but so far, this works.
             # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
 
         logging.info('finish scheduling pipeline')

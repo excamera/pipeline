@@ -1,5 +1,8 @@
 #!/usr/bin/python
 import Queue
+from time import strftime, localtime
+
+import libmu
 
 
 class Pipeline(object):
@@ -19,7 +22,8 @@ class Pipeline(object):
         def __str__(self):
             pass
 
-    def __init__(self):
+    def __init__(self, pipe_id=None):
+        self.pipe_id = strftime("%Y%m%d%H%M%S", localtime()) + libmu.util.rand_str(4) if pipe_id is None else pipe_id
         self.stages = {}
 
     def __str__(self):
