@@ -13,7 +13,7 @@ from taskspec.pipeline import Pipeline
 from taskspec.scheduler import SimpleScheduler
 from taskspec.generator import Generator
 from util import media_probe
-from stages import decode, encode, grayscale
+from stages import decode_from_url, grayscale, encode_to_dash
 from util.amend_mpd import amend_mpd
 from util.media_probe import get_signed_URI
 
@@ -68,19 +68,22 @@ def invoke(url, commands):
     return signed_mpd, None
 
 
-def invoke2(url):
+def invoke2(url, _):
     logging.info('entering pipeline.invoke2()')
 
     output = Queue.Queue()
     pipe = Pipeline()
-    pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_WlgU5cKP', decode.InitState, default_event))
+    pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_WlgU5cKP', decode_from_url.InitState, default_event))
     pipe.add_stage(Pipeline.Stage('grayscale', 'lambda_test_WlgU5cKP', grayscale.InitState, default_event))
-    pipe.add_stage(Pipeline.Stage('encode', 'lambda_test_WlgU5cKP', encode.InitState, default_event))
+    pipe.add_stage(Pipeline.Stage('encode', 'lambda_test_WlgU5cKP', encode_to_dash.InitState, default_event))
     pipe.add_downstream('decode', 'grayscale', 'frames')
     pipe.add_downstream('grayscale', 'encode', 'frames')
     pipe.add_downstream('encode', output, 'chunks')
 
-    handler = logging.FileHandler(pipe.pipe_id+'.csv')
+    pipe_dir = pipe.pipe_id
+    os.system('mkdir -p ' + pipe_dir)
+
+    handler = logging.FileHandler(pipe_dir+'/log.csv')
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter('%(created)f, %(message)s'))
     logger = logging.getLogger(pipe.pipe_id)
@@ -92,14 +95,35 @@ def invoke2(url):
     duration = media_probe.get_duration(signed_URI)
     for i in range(int(math.ceil(duration))):
         inevent = {'key': signed_URI, 'starttime': i, 'duration': 1}
-        pipe.stages['decode'].buffer_queue.put({'lineage': str(i), 'video_url': inevent, 'pipe_id': pipe.pipe_id})
+        pipe.stages['decode'].buffer_queue.put({'lineage': str(i+1), 'video_url': inevent, 'pipe_id': pipe.pipe_id})
 
     logger.info('starting pipeline')
     SimpleScheduler.schedule(pipe)
     logger.info('pipeline finished')
 
+    num_m4s = 0
     while not output.empty():
-        logging.debug(output.get(block=False))
+        chunks = output.get(block=False)
+        num_m4s += 1
+        if int(chunks['lineage']) == 1:
+            out_key = chunks['chunks']['key']
+
+    os.system('aws s3 cp ' + out_key +'00000001_dash.mpd '+pipe_dir+'/')
+    logging.info('mpd downloaded')
+    with open(pipe_dir+'/00000001_dash.mpd', 'r') as fin:
+        init_mpd = fin.read()
+
+    final_mpd = amend_mpd(init_mpd, duration, out_key, num_m4s)
+
+    logging.info('mpd amended')
+    with open(pipe_dir+'/output.xml', 'wb') as fout:
+        fout.write(final_mpd)
+
+    os.system('aws s3 cp ' + pipe_dir+'/output.xml ' + out_key)
+    logging.info('mpd uploaded')
+    signed_mpd = get_signed_URI(out_key+'output.xml')
+    logging.info('mpd siged, returing')
+    return signed_mpd, None
 
 
 if __name__ == '__main__':
