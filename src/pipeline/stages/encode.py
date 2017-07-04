@@ -31,7 +31,7 @@ class RunState(CommandListState):
                   , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'run:./ffmpeg -framerate 24 -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
-                                   '-c:v libx264 -pix_fmt yuv420p ##TMPDIR##/out_0/{lineage}.mp4')
+                                   '-c:v libx264 -pix_fmt yuv420p ##TMPDIR##/out_0/{segment}.mp4')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)
                     ]
@@ -41,7 +41,7 @@ class RunState(CommandListState):
         self.out_queue = prevState.out_queue
         self.out_key = prevState.out_key
 
-        params = {'in_key': self.in_events['frames']['key'], 'lineage': '%08d'%int(self.in_events['lineage']), 'out_key': self.out_key}
+        params = {'in_key': self.in_events['frames']['key'], 'segment': '%08d'%int(self.in_events['lineage']), 'out_key': self.out_key}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 

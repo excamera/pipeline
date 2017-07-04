@@ -13,7 +13,7 @@ from taskspec.pipeline import Pipeline
 from taskspec.scheduler import SimpleScheduler
 from taskspec.generator import Generator
 from util import media_probe
-from stages import decode, encode
+from stages import decode, encode, grayscale
 from util.amend_mpd import amend_mpd
 from util.media_probe import get_signed_URI
 
@@ -74,8 +74,10 @@ def invoke2(url):
     output = Queue.Queue()
     pipe = Pipeline()
     pipe.add_stage(Pipeline.Stage('decode', 'lambda_test_WlgU5cKP', decode.InitState, default_event))
+    pipe.add_stage(Pipeline.Stage('grayscale', 'lambda_test_WlgU5cKP', grayscale.InitState, default_event))
     pipe.add_stage(Pipeline.Stage('encode', 'lambda_test_WlgU5cKP', encode.InitState, default_event))
-    pipe.add_downstream('decode', 'encode', 'frames')
+    pipe.add_downstream('decode', 'grayscale', 'frames')
+    pipe.add_downstream('grayscale', 'encode', 'frames')
     pipe.add_downstream('encode', output, 'chunks')
 
     handler = logging.FileHandler(pipe.pipe_id+'.csv')
@@ -86,7 +88,7 @@ def invoke2(url):
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
 
-    signed_URI = media_probe.get_signed_URI(url)  # currently only single video for all workers
+    signed_URI = media_probe.get_signed_URI(url)  # currently only single input url for all workers
     duration = media_probe.get_duration(signed_URI)
     for i in range(int(math.ceil(duration))):
         inevent = {'key': signed_URI, 'starttime': i, 'duration': 1}
