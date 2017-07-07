@@ -21,7 +21,7 @@ class EmitState(CommandListState):
         out_key = prevState.out_key
 
         out_event = {'key': out_key}
-        out_queue['chunks'].put({'lineage': self.in_events['lineage'], 'chunks': out_event, 'pipe_id': self.in_events['pipe_id']})
+        out_queue['chunks'].put({'metadata': self.in_events['metadata'], 'chunks': out_event})
 
 
 class RunState(CommandListState):
@@ -41,7 +41,7 @@ class RunState(CommandListState):
         self.out_queue = prevState.out_queue
         self.out_key = prevState.out_key
 
-        params = {'in_key': self.in_events['frames']['key'], 'segment': '%08d'%int(self.in_events['lineage']), 'out_key': self.out_key}
+        params = {'in_key': self.in_events['frames']['key'], 'segment': '%08d'%int(self.in_events['metadata']['lineage']), 'out_key': self.out_key}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
@@ -58,5 +58,5 @@ class InitState(CommandListState):
     def __init__(self, prevState, in_events, out_queue):
         super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
         self.out_queue = out_queue
-        self.out_key = 's3://lixiang-pipeline/'+in_events['pipe_id']+'/encode/'+libmu.util.rand_str(16)+'/'
+        self.out_key = 's3://lixiang-pipeline/'+in_events['metadata']['pipe_id']+'/encode/'+libmu.util.rand_str(16)+'/'
         logging.debug('in_events: '+str(in_events)+', out_queue: '+str(out_queue))

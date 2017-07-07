@@ -31,7 +31,7 @@ for k, v in c.iteritems():
     config[k] = v
 
 default_event = {"mode": 1
-    , "port": 13579
+    , "port": config['port_number']
     , "addr": None  # server_launch will fill this in for us
     , "nonblock": 0
     # , 'cacert': libmu.util.read_pem(config['cacert_file']) if config['cacert_file'] is not None else None
@@ -68,7 +68,7 @@ def invoke(url, commands):
     return signed_mpd, None
 
 
-def invoke2(url, _):
+def invoke2(url, command=None):
     logging.info('entering pipeline.invoke2()')
 
     output = Queue.Queue()
@@ -93,9 +93,10 @@ def invoke2(url, _):
 
     signed_URI = media_probe.get_signed_URI(url)  # currently only single input url for all workers
     duration = media_probe.get_duration(signed_URI)
+    fps = media_probe.get_fps(signed_URI)
     for i in range(int(math.ceil(duration))):
         inevent = {'key': signed_URI, 'starttime': i, 'duration': 1}
-        pipe.stages['decode'].buffer_queue.put({'lineage': str(i+1), 'video_url': inevent, 'pipe_id': pipe.pipe_id})
+        pipe.stages['decode'].buffer_queue.put({'metadata': {'pipe_id': pipe.pipe_id, 'fps': fps, 'lineage': str(i+1)}, 'video_url': inevent})
 
     logger.info('starting pipeline')
     SimpleScheduler.schedule(pipe)
@@ -105,7 +106,7 @@ def invoke2(url, _):
     while not output.empty():
         chunks = output.get(block=False)
         num_m4s += 1
-        if int(chunks['lineage']) == 1:
+        if int(chunks['metadata']['lineage']) == 1:
             out_key = chunks['chunks']['key']
 
     os.system('aws s3 cp ' + out_key +'00000001_dash.mpd '+pipe_dir+'/')
@@ -122,7 +123,7 @@ def invoke2(url, _):
     os.system('aws s3 cp ' + pipe_dir+'/output.xml ' + out_key)
     logging.info('mpd uploaded')
     signed_mpd = get_signed_URI(out_key+'output.xml')
-    logging.info('mpd siged, returing')
+    logging.info('mpd siged, returning')
     return signed_mpd, None
 
 

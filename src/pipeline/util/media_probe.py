@@ -25,6 +25,13 @@ def get_duration(URI):
     return sum(x * int(t) for x, t in zip([3600, 60, 1], iso_time.split('.')[0].split(":")))+float('.'+iso_time.split('.')[1])
 
 
+def get_fps(URI):
+    output = get_all_info(URI)
+    line = [v for v in output if "fps" in v][0]
+    fps = [v for v in line.split(',') if "fps" in v][0].split()[0]
+    return float(fps)
+
+
 def get_nframes(URI, suffix=''): # a wildcard suffix
     if URI.startswith('s3://'):
         client = boto3.client('s3')

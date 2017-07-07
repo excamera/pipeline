@@ -21,7 +21,7 @@ class EmitState(CommandListState):
         out_key = prevState.out_key
 
         out_event = {'key': out_key}
-        out_queue['frames'].put({'lineage': self.in_events['lineage'], 'frames': out_event, 'pipe_id': self.in_events['pipe_id']})
+        out_queue['frames'].put({'metadata': self.in_events['metadata'], 'frames': out_event})
 
 
 class RunState(CommandListState):
@@ -58,5 +58,5 @@ class InitState(CommandListState):
     def __init__(self, prevState, in_events, out_queue):
         super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
         self.out_queue = out_queue
-        self.out_key = 's3://lixiang-pipeline/'+in_events['pipe_id']+'/grayscale/'+libmu.util.rand_str(16)+'/'
+        self.out_key = 's3://lixiang-pipeline/'+in_events['metadata']['pipe_id']+'/grayscale/'+libmu.util.rand_str(16)+'/'
         logging.debug('in_events: '+str(in_events)+', out_queue: '+str(out_queue))
