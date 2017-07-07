@@ -29,7 +29,7 @@ class RunState(CommandListState):
     extra = "(run)"
     nextState = EmitState
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/out_0/')
-                  , ('OK:RETVAL(0)', 'run:./ffmpeg -y -ss {starttime} -t {duration} -i "{URL}" -f image2 -c:v png -r 24 '
+                  , ('OK:RETVAL(0)', 'run:./ffmpeg -y -ss {starttime} -t {duration} -i "{URL}" -f image2 -c:v png '
                                     '-start_number 1 ##TMPDIR##/out_0/%08d.png')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)
