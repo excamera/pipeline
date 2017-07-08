@@ -71,3 +71,52 @@ class SimpleScheduler(object):
             # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
 
         logging.info('finish scheduling pipeline')
+
+
+class BarrierScheduler(object):
+    """Imagine an invisible barrier between stages"""
+    @classmethod
+    def schedule(cls, pipeline):
+        logging.info('start scheduling pipeline')
+        last_print = 0
+        tasks = []
+        count = 0
+        while True:
+            buffer_empty = True
+            deliver_empty = True
+            for key, stage in pipeline.stages.iteritems():
+                stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
+                if not stage.buffer_queue.empty():
+                    if count == 0:
+                        count = stage.buffer_queue.qsize()
+                    buffer_empty = False
+                    stage.deliver_func(stage.buffer_queue, stage.deliver_queue)
+
+            for key, stage in pipeline.stages.iteritems():
+                if stage.deliver_queue.qsize() == count:
+                    while not stage.deliver_queue.empty():
+                        deliver_empty = False
+                        t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.downstreams, stage.event)
+                        tasks.append(t)
+                        tracker.Tracker.submit(t)
+                        logging.debug('submitted a task: '+str(t))
+
+            error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
+            if len(error_tasks) > 0:
+                logging.error(str(len(error_tasks))+" tasks failed: ")
+                for et in error_tasks:
+                    logging.error(et.current_state.str_extra())
+                raise Exception(str(len(error_tasks))+" tasks failed")
+            tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
+
+            if buffer_empty and deliver_empty and len(tasks) == 0:
+                break
+
+            if time.time() > last_print+1:
+                print_task_states(tasks)
+                last_print = time.time()
+            time.sleep(0.001)
+            # sleep to avoid spinning, we can use notification instead, but so far, this works.
+            # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
+
+        logging.info('finish scheduling pipeline')
