@@ -10,7 +10,10 @@ from libmu.machine_state import ErrorState, TerminalState
 
 
 def default_deliver_func(buffer_queue, deliver_queue):
-    """deliver every event from buffer_queue, change event from output to input"""
+    """deliver every event from buffer_queue, change event from output to input
+    :param buffer_queue: output of upstream
+    :param deliver_queue: input of downstream
+    """
     while True:
         try:
             event = buffer_queue.get(block=False)
@@ -123,7 +126,9 @@ class BarrierScheduler(object):
 
 
 class LadderScheduler(object):
-    """A scheduler that scans every stage for events and submits at most 200 tasks each second"""
+    """A scheduler that scans every stage for events and submits at most N_TASKS each second"""
+    N_TASKS = 50
+
     @classmethod
     def schedule(cls, pipeline):
         logging.info('start scheduling pipeline')
@@ -150,7 +155,7 @@ class LadderScheduler(object):
                 break
 
             if time.time() > last_fill + 1:
-                quota = 50
+                quota = cls.N_TASKS
                 last_fill = time.time()
 
             def task_gen():
@@ -189,3 +194,82 @@ class LadderScheduler(object):
             # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
 
         logging.info('finish scheduling pipeline')
+
+
+class PriorityLadderScheduler(object):
+    """A scheduler that scans every stage for events and submits at most N_TASKS with highest priority each second"""
+    N_TASKS = 50
+
+    @classmethod
+    def schedule(cls, pipeline):
+        logging.info('start scheduling pipeline')
+        last_fill = 0
+        quota = 0
+        last_print = 0
+        tasks = []
+        gen = None
+        while True:
+            buffer_empty = True
+            deliver_empty = True
+            for key, stage in pipeline.stages.iteritems():
+                stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
+                if not stage.buffer_queue.empty():
+                    buffer_empty = False
+                    stage.deliver_func(stage.buffer_queue, stage.deliver_queue)
+
+            for key, stage in pipeline.stages.iteritems():
+                if not stage.deliver_queue.empty():
+                    deliver_empty = False
+                    break
+
+            if buffer_empty and deliver_empty and len(tasks) == 0:
+                break
+
+            if time.time() > last_fill + 1:
+                quota = cls.N_TASKS
+                last_fill = time.time()
+
+            def task_gen(quota):
+                all_items = []
+                for key, stage in pipeline.stages.iteritems():
+                    while not stage.deliver_queue.empty():
+                        item = stage.deliver_queue.get()
+                        all_items.append((item, stage))
+
+                sorted_items = sorted(all_items, key=lambda item: int(item[0]['metadata']['lineage']))
+                ret = []
+                for i in xrange(min(quota, len(sorted_items))):
+                    t = tracker.Task(sorted_items[i][1].lambda_function, sorted_items[i][1].init_state,
+                                     sorted_items[i][0], sorted_items[i][1].downstreams, sorted_items[i][1].event)
+                    ret.append(t)
+
+                for item in sorted_items[quota:]:
+                    item[1].deliver_queue.put(item[0])  # send back the items
+
+                return ret
+
+            task_list = task_gen(quota)
+            for t in task_list:
+                tasks.append(t)
+                tracker.Tracker.submit(t)
+                logging.debug('submitted a task: '+str(t))
+                quota -= 1
+
+            error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
+            if len(error_tasks) > 0:
+                logging.error(str(len(error_tasks))+" tasks failed: ")
+                for et in error_tasks:
+                    logging.error(et.current_state.str_extra())
+                raise Exception(str(len(error_tasks))+" tasks failed")
+            tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
+
+
+            if time.time() > last_print+1:
+                print_task_states(tasks)
+                last_print = time.time()
+            time.sleep(0.001)
+            # sleep to avoid spinning, we can use notification instead, but so far, this works.
+            # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
+
+        logging.info('finish scheduling pipeline')
+
