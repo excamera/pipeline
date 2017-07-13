@@ -2,26 +2,11 @@
 import Queue
 
 import logging
-import threading
 import time
 
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
-
-
-def default_deliver_func(buffer_queue, deliver_queue):
-    """deliver every event from buffer_queue, change event from output to input
-    :param buffer_queue: output of upstream
-    :param deliver_queue: input of downstream
-    """
-    while True:
-        try:
-            event = buffer_queue.get(block=False)
-            deliver_queue.put(event)
-            logging.debug('move an event from buffer to deliver queue')
-        except Queue.Empty:
-            logging.debug('finish moving, returning')
-            break
+from stages.util import default_deliver_func
 
 
 def print_task_states(tasks):
@@ -272,4 +257,3 @@ class PriorityLadderScheduler(object):
             # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
 
         logging.info('finish scheduling pipeline')
-
