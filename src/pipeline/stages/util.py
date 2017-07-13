@@ -27,3 +27,17 @@ def default_deliver_func(buffer_queue, deliver_queue):
         except Queue.Empty:
             logging.debug('finish moving, returning')
             break
+
+
+def pair_deliver_func(buffer_queue, deliver_queue):
+    lineage_map = {}
+    while not buffer_queue.empty():
+        event = buffer_queue.get()
+        if lineage_map.has_key(event['metadata']['lineage']):
+            existing_event = lineage_map.pop(event['metadata']['lineage'])
+            deliver_queue.put({'metadata': event['metadata'], 'frames_0': existing_event['frames'], 'frames_1': event['frames']})
+        else:
+            lineage_map[event['metadata']['lineage']] = event
+
+    for value in lineage_map.values():
+        buffer_queue.put(value)
