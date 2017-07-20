@@ -1,0 +1,15 @@
+{
+    "daemon_addr": "vm132.sysnet.ucsd.edu"
+  , "daemon_port": 24680
+
+  , "scheduler": "SimpleScheduler"
+  , "default_lambda_function": "lambda_test_ZbykCGGs"
+
+  , "aws_access_key_id_file": "/home/aolx/devel/ssl/access_key"
+  , "aws_secret_access_key_file": "/home/aolx/devel/ssl/secret_key"
+  , "srvcrt_file": "/home/aolx/devel/ssl/server_cert.pem"
+  , "srvkey_file": "/home/aolx/devel/ssl/server_key.pem"
+
+  , "tracker_port": 13581
+  , "tracker_backlog": 3000
+}

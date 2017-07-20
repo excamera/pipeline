@@ -1,0 +1,43 @@
+{
+  "nodes":[
+    {
+      "name": "decode",
+      "stage": "decode_from_url",
+      "config": {
+      }
+    },
+    {
+      "name": "grayscale",
+      "stage": "grayscale",
+      "config": {
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_to_dash",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_url",
+      "dst": "decode:video_url"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "grayscale:frames"
+    },
+    {
+      "src": "grayscale:frames",
+      "dst": "encode:frames"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+
+}

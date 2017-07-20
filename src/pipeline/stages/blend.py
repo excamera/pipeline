@@ -17,11 +17,10 @@ class EmitState(CommandListState):
 
     def __init__(self, prevState):
         super(EmitState, self).__init__(prevState, trace_func=default_trace_func)
-        out_queue = prevState.out_queue
+        emit = prevState.emit
         out_key = prevState.out_key
 
-        out_event = {'key': out_key}
-        out_queue['frames'].put({'metadata': self.in_events['metadata'], 'frames': out_event})
+        emit('frames', {'metadata': self.in_events['frames_0']['metadata'], 'key': out_key})
 
 
 class RunState(CommandListState):
@@ -38,7 +37,7 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState, trace_func=default_trace_func)
-        self.out_queue = prevState.out_queue
+        self.emit = prevState.emit
         self.out_key = prevState.out_key
 
         params = {'in_key_0': self.in_events['frames_0']['key'], 'in_key_1': self.in_events['frames_1']['key'],
@@ -56,8 +55,8 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, out_queue):
+    def __init__(self, prevState, in_events, emit):
         super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
-        self.out_queue = out_queue
-        self.out_key = 's3://lixiang-pipeline/'+in_events['metadata']['pipe_id']+'/blend/'+libmu.util.rand_str(16)+'/'
-        logging.debug('in_events: '+str(in_events)+', out_queue: '+str(out_queue))
+        self.emit = emit
+        self.out_key = 's3://lixiang-pipeline/'+in_events['frames_0']['metadata']['pipe_id']+'/blend/'+libmu.util.rand_str(16)+'/'
+        logging.debug('in_events: '+str(in_events)+', emit: '+str(emit))

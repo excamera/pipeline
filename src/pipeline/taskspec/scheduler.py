@@ -3,6 +3,7 @@ import Queue
 
 import logging
 import time
+import pdb
 
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
@@ -30,12 +31,12 @@ class SimpleScheduler(object):
                 stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
                 if not stage.buffer_queue.empty():
                     buffer_empty = False
-                    stage.deliver_func(stage.buffer_queue, stage.deliver_queue)
+                    stage.deliver_func(stage.buffer_queue, stage.deliver_queue, stale=len(tasks) == 0 and stage.deliver_queue.empty())
 
             for key, stage in pipeline.stages.iteritems():
                 while not stage.deliver_queue.empty():
                     deliver_empty = False
-                    t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.downstreams, stage.event)
+                    t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.emit, stage.event)
                     tasks.append(t)
                     tracker.Tracker.submit(t)
                     logging.debug('submitted a task: '+str(t))
@@ -53,6 +54,7 @@ class SimpleScheduler(object):
 
             if time.time() > last_print+1:
                 print_task_states(tasks)
+                logging.debug("buffer empty: "+str(buffer_empty)+', deliver empty: '+str(deliver_empty))
                 last_print = time.time()
             time.sleep(0.001)
             # sleep to avoid spinning, we can use notification instead, but so far, this works.
@@ -84,7 +86,7 @@ class BarrierScheduler(object):
                 if stage.deliver_queue.qsize() == count:
                     while not stage.deliver_queue.empty():
                         deliver_empty = False
-                        t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.downstreams, stage.event)
+                        t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.emit, stage.event)
                         tasks.append(t)
                         tracker.Tracker.submit(t)
                         logging.debug('submitted a task: '+str(t))
@@ -146,7 +148,7 @@ class LadderScheduler(object):
             def task_gen():
                 for key, stage in pipeline.stages.iteritems():
                     while not stage.deliver_queue.empty():
-                        t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.downstreams, stage.event)
+                        t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.emit, stage.event)
                         yield t
 
             while quota > 0:
@@ -225,7 +227,7 @@ class PriorityLadderScheduler(object):
                 ret = []
                 for i in xrange(min(quota, len(sorted_items))):
                     t = tracker.Task(sorted_items[i][1].lambda_function, sorted_items[i][1].init_state,
-                                     sorted_items[i][0], sorted_items[i][1].downstreams, sorted_items[i][1].event)
+                                     sorted_items[i][0], sorted_items[i][1].emit, sorted_items[i][1].event)
                     ret.append(t)
 
                 for item in sorted_items[quota:]:

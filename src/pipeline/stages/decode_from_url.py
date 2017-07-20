@@ -24,12 +24,11 @@ class ConfirmEmitState(OnePassState):
 
     def __init__(self, prevState):
         super(ConfirmEmitState, self).__init__(prevState, trace_func=default_trace_func)
-        self.out_queue = prevState.out_queue
+        self.emit = prevState.emit
         self.out_key = prevState.out_key
 
     def post_transition(self):
-        out_event = {'key': self.out_key}
-        self.out_queue['frames'].put({'metadata': self.in_events['metadata'], 'frames': out_event})
+        self.emit('frames', {'metadata': self.in_events['video_url']['metadata'], 'key': self.out_key})
         return self.nextState(self)  # don't forget this
 
 
@@ -41,7 +40,7 @@ class TryEmitState(OnePassState):
 
     def __init__(self, prevState):
         super(TryEmitState, self).__init__(prevState, trace_func=default_trace_func)
-        self.out_queue = prevState.out_queue
+        self.emit = prevState.emit
         self.out_key = prevState.out_key
         params = {'out_key': self.out_key}
         self.command = self.command.format(**params)
@@ -58,7 +57,7 @@ class CheckOutputState(IfElseState):
 
     def __init__(self, prevState):
         super(CheckOutputState, self).__init__(prevState, trace_func=default_trace_func)
-        self.out_queue = prevState.out_queue
+        self.emit = prevState.emit
         self.out_key = prevState.out_key
 
 
@@ -68,12 +67,12 @@ class RunState(CommandListState):
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'run:./ffmpeg -y -ss {starttime} -t {duration} -i "{URL}" -f image2 -c:v png '
                                     '-start_number 1 ##TMPDIR##/out_0/%08d.png')
-                  , ('OK:RETVAL(0)', 'run:test `find ##TMPDIR##/out_0/ -name "*png" | wc -l` -gt 0')
+                  , ('OK:RETVAL(0)', 'run:test `find ##TMPDIR##/out_0/ -name "*png" | wc -l` -gt 0')  # result will be used in next state
                     ]
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState, trace_func=default_trace_func)
-        self.out_queue = prevState.out_queue
+        self.emit = prevState.emit
         self.out_key = prevState.out_key
 
         params = {'starttime': self.in_events['video_url']['starttime'], 'duration': self.in_events['video_url']['duration'],
@@ -91,8 +90,8 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, out_queue):
+    def __init__(self, prevState, in_events, emit):
         super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
-        self.out_queue = out_queue
-        self.out_key = 's3://lixiang-pipeline/'+in_events['metadata']['pipe_id']+'/decode/'+libmu.util.rand_str(16)+'/'
-        logging.debug('in_events: '+str(in_events)+', out_queue: '+str(out_queue))
+        self.emit = emit
+        self.out_key = 's3://lixiang-pipeline/'+in_events['video_url']['metadata']['pipe_id']+'/decode/'+libmu.util.rand_str(16)+'/'
+        logging.debug('in_events: '+str(in_events)+', emit: '+str(emit))

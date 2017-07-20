@@ -35,6 +35,7 @@
 *.lo
 *.la
 *.m4
+*.csv
 
 Makefile
 Makefile.in
@@ -59,3 +60,8 @@ Makefile.in
 /stamp-h1
 /compile
 /test-driver
+.sync/
+.idea/
+src/pipeline/service/pipeline_pb2.py
+src/pipeline/service/pipeline_pb2_grpc.py
+src/pipeline/logs/

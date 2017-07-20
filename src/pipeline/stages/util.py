@@ -1,6 +1,20 @@
 #!/usr/bin/python
 import Queue
 import logging
+import libmu
+from config import settings
+
+
+def get_default_event():
+    return {
+        "mode": 1
+        , "port": settings['tracker_port']
+        , "addr": None  # server_launch will fill this in for us
+        , "nonblock": 0
+        # , 'cacert': libmu.util.read_pem(settings['cacert_file']) if 'cacert_file' in settings else None
+        , 'srvcrt': libmu.util.read_pem(settings['srvcrt_file']) if 'srvcrt_file' in settings else None
+        , 'srvkey': libmu.util.read_pem(settings['srvkey_file']) if 'srvkey_file' in settings else None
+    }
 
 
 def default_trace_func(in_events, msg):
@@ -10,11 +24,11 @@ def default_trace_func(in_events, msg):
     so time interval between two commands is a time
     upper bound for first command
     """
-    logger = logging.getLogger(in_events['metadata']['pipe_id'])
-    logger.debug(in_events['metadata']['lineage'] + ', ' + msg.split()[0])
+    logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
+    logger.debug(in_events.values()[0]['metadata']['lineage'] + ', ' + msg.split()[0])
 
 
-def default_deliver_func(buffer_queue, deliver_queue):
+def default_deliver_func(buffer_queue, deliver_queue, **kwargs):
     """deliver every event from buffer_queue, change event from output to input
     :param buffer_queue: output of upstream
     :param deliver_queue: input of downstream
@@ -29,15 +43,20 @@ def default_deliver_func(buffer_queue, deliver_queue):
             break
 
 
-def pair_deliver_func(buffer_queue, deliver_queue):
+def pair_deliver_func(buffer_queue, deliver_queue, stale=False, **kwargs):
+    refreshed = False
     lineage_map = {}
     while not buffer_queue.empty():
         event = buffer_queue.get()
-        if lineage_map.has_key(event['metadata']['lineage']):
-            existing_event = lineage_map.pop(event['metadata']['lineage'])
-            deliver_queue.put({'metadata': event['metadata'], 'frames_0': existing_event['frames'], 'frames_1': event['frames']})
+        if event.values()[0]['metadata']['lineage'] in lineage_map:
+            existing_event = lineage_map.pop(event.values()[0]['metadata']['lineage'])
+            paired_event = existing_event.copy()
+            paired_event.update(event)
+            deliver_queue.put(paired_event)
+            refreshed = True
         else:
-            lineage_map[event['metadata']['lineage']] = event
+            lineage_map[event.values()[0]['metadata']['lineage']] = event
 
-    for value in lineage_map.values():
-        buffer_queue.put(value)
+    if refreshed or not stale:
+        for value in lineage_map.values():
+            buffer_queue.put(value)
