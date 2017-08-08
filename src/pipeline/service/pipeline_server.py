@@ -1,11 +1,9 @@
 import json
 import logging
 import os
-
 import math
 import pdb
 import traceback
-
 from concurrent import futures
 import grpc
 import pipeline_pb2
@@ -34,11 +32,16 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 pipe.duration = duration
                 fps = media_probe.get_fps(signed_URI)
 
+                configs = {}
+                pdb.set_trace()
+                for k, v in pipe.stages.iteritems():
+                    configs[k] = v.conf
                 for i in range(int(math.ceil(duration))):
                     in_event = {'key': signed_URI,
                                 'starttime': i,
                                 'duration': 1,
-                                'metadata': {'pipe_id': pipe.pipe_id, 'fps': fps, 'lineage': str(i + 1)}}
+                                'metadata': {'pipe_id': pipe.pipe_id, 'configs': configs, 'fps': fps,
+                                             'lineage': str(i + 1)}}
                     pipe.inputs['input_' + str(index)]['dst_node'].put({'video_url': in_event})
                     # put event to the buffer queue of first stage
                     # the video_url is input stream key

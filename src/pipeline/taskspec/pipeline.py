@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import Queue
 import importlib
+import json
 from time import strftime, localtime
 from config import settings
 import libmu
@@ -11,11 +12,12 @@ import pdb
 
 class Pipeline(object):
     class Stage(object):
-        def __init__(self, key, lambda_function, init_state, event, deliver_func=None, regions=None):
+        def __init__(self, key, lambda_function, init_state, conf, event, deliver_func=None, regions=None):
             self.key = key
             self.lambda_function = lambda_function
             self.event = event
             self.init_state = init_state
+            self.conf = conf
             self.regions = regions
             self.deliver_func = deliver_func
             self.downstreams = {}
@@ -65,6 +67,7 @@ def create_from_spec(pipe_spec):
             node['name']
             , node.get('lambda_function', settings['default_lambda_function'])
             , init_state
+            , node.get('config', {})
             , node.get('event', stages.util.get_default_event())
             , deliver_func=getattr(stages.util, node.get('deliver_function', 'default_deliver_func'))
             , regions=None
