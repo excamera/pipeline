@@ -3,6 +3,7 @@ import logging
 
 import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
+from config import settings
 from stages.util import default_trace_func
 
 
@@ -68,5 +69,5 @@ class InitState(CommandListState):
     def __init__(self, prevState, in_events, emit):
         super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
         self.emit = emit
-        self.out_key = 's3://lixiang-pipeline/'+in_events['video_url']['metadata']['pipe_id']+'/monostage_gs/'+libmu.util.rand_str(16)+'/'
+        self.out_key = settings['storage_base']+in_events['video_url']['metadata']['pipe_id']+'/monostage_gs/'+libmu.util.rand_str(16)+'/'
         logging.debug('in_events: '+str(in_events)+', emit: '+str(emit))
