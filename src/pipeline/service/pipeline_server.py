@@ -33,7 +33,6 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 fps = media_probe.get_fps(signed_URI)
 
                 configs = {}
-                pdb.set_trace()
                 for k, v in pipe.stages.iteritems():
                     configs[k] = v.conf
                 for i in range(int(math.ceil(duration))):
