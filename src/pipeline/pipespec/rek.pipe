@@ -1,0 +1,54 @@
+{
+  "nodes":[
+    {
+      "name": "decode",
+      "stage": "decode_from_url",
+      "config": {
+      }
+    },
+    {
+      "name": "googleFace",
+      "stage": "googleFace",
+      "config": { "person":"Thor"
+      }
+    },
+    {
+      "name": "rek",
+      "stage": "rek",
+      "config": {
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_to_dash",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_url",
+      "dst": "decode:video_url"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "googleFace:frames"
+    },
+    {
+      "src": "googleFace:frames",
+      "dst": "rek:frames"
+    },
+
+    {
+      "src": "rek:frames",
+      "dst": "encode:frames"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+
+}
