@@ -4,7 +4,7 @@
 
   , "scheduler": "SimpleScheduler"
   , "storage_base": "s3://lixiang-pipeline/"
-  , "default_lambda_function": "lambda_test_ZbykCGGs"
+  , "default_lambda_function": "lambda_test_XF2gYxdD"
 
   , "aws_access_key_id_file": "/home/aolx/devel/ssl/access_key"
   , "aws_secret_access_key_file": "/home/aolx/devel/ssl/secret_key"
