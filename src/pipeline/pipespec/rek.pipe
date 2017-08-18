@@ -4,12 +4,13 @@
       "name": "decode",
       "stage": "decode_from_url",
       "config": {
+	"youtube":"https://www.youtube.com/watch?v=z9RBALOraws"	
       }
     },
     {
       "name": "googleFace",
       "stage": "googleFace",
-      "config": { "person":"Thor"
+      "config": { "person":"Thor Chris Avengers"
       }
     },
     {

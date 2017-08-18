@@ -30,7 +30,8 @@ class RunState(CommandListState):
                   , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'run:cp -r ##TMPDIR##/in_0/*  ##TMPDIR##/out_0/.')
-                  ,('OK:RETVAL(0)','run:python googleFace_s3.py "Captain America Actor" 5 ##TMPDIR##')
+                  ,('OK:RETVAL(0)','run:python googleFace_s3.py '+\
+			'"{person}" 5 ##TMPDIR##')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)
                     ]
@@ -40,7 +41,8 @@ class RunState(CommandListState):
         self.emit = prevState.emit
         self.out_key = prevState.out_key
 
-        params = {'in_key': self.in_events['frames']['key'], 'out_key': self.out_key}
+        params = {'in_key': self.in_events['frames']['key'], 'out_key': self.out_key,
+		'person': str(self.in_events['frames']['metadata']['configs']['googleFace']['person'])}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
