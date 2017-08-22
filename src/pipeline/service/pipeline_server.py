@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import math
 import pdb
 import traceback
 from concurrent import futures
@@ -11,7 +10,6 @@ import pipeline_pb2_grpc
 from config import settings
 from taskspec import pipeline
 import taskspec.scheduler
-from util import media_probe
 from util.amend_mpd import amend_mpd
 from util.media_probe import get_signed_URI
 
@@ -25,25 +23,14 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
         try:
             pipe = pipeline.create_from_spec(json.loads(request.pipeline_spec))
 
-            for index in range(len(request.input_urls)):
-                # we can abstract input formats here
-                signed_URI = media_probe.get_signed_URI(request.input_urls[index])
-                duration = media_probe.get_duration(signed_URI)
-                pipe.duration = duration
-                fps = media_probe.get_fps(signed_URI)
-
+            for index in range(len(request.inputs)):
                 configs = {}
                 for k, v in pipe.stages.iteritems():
                     configs[k] = v.conf
-                for i in range(int(math.ceil(duration))):
-                    in_event = {'key': signed_URI,
-                                'starttime': i,
-                                'duration': 1,
-                                'metadata': {'pipe_id': pipe.pipe_id, 'configs': configs, 'fps': fps,
-                                             'lineage': str(i + 1)}}
-                    pipe.inputs['input_' + str(index)]['dst_node'].put({'video_url': in_event})
-                    # put event to the buffer queue of first stage
-                    # the video_url is input stream key
+                in_event = {'key': request.inputs[index].value,
+                            'metadata': {'pipe_id': pipe.pipe_id, 'configs': configs, 'lineage': '0'}}
+                pipe.inputs['input_' + str(index)]['dst_node'].put({request.inputs[index].type: in_event})
+                # put events to the buffer queue of all input stages
 
             pipe_dir = 'logs/' + pipe.pipe_id
             os.system('mkdir -p ' + pipe_dir)
@@ -61,35 +48,43 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             sched.schedule(pipe)
             logger.info('pipeline finished')
 
-            result_queue = pipe.outputs.values()[0]['dst_node']
+            result_queue = pipe.outputs.values()[0]['dst_node']  # should be only one output queue
 
             num_m4s = 0
+            out_key = None
+            logging.debug("length of output queue: %s", result_queue.qsize())
+
             while not result_queue.empty():
-                chunks = result_queue.get(block=False)['chunks']
+                chunk = result_queue.get(block=False)['chunks']  # TODO: should distinguish chunks vs. m4schunks
                 num_m4s += 1
-                if int(chunks['metadata']['lineage']) == 1:
-                    out_key = chunks['key']
+                if int(chunk['metadata']['lineage']) == 1:
+                    out_key = chunk['key']
 
-            os.system('aws s3 cp ' + out_key + '00000001_dash.mpd ' + pipe_dir + '/')
-            logging.info('mpd downloaded')
-            with open(pipe_dir + '/00000001_dash.mpd', 'r') as fin:
-                init_mpd = fin.read()
+            logging.debug("number of m4s chunks: %s", num_m4s)
+            if out_key is not None:
+                os.system('aws s3 cp ' + out_key + '00000001_dash.mpd ' + pipe_dir + '/')
+                logging.info('mpd downloaded')
+                with open(pipe_dir + '/00000001_dash.mpd', 'r') as fin:
+                    init_mpd = fin.read()
 
-            final_mpd = amend_mpd(init_mpd, float(num_m4s), out_key, num_m4s)
+                final_mpd = amend_mpd(init_mpd, float(num_m4s), out_key, num_m4s)
 
-            logging.info('mpd amended')
-            with open(pipe_dir + '/output.xml', 'wb') as fout:
-                fout.write(final_mpd)
+                logging.info('mpd amended')
+                with open(pipe_dir + '/output.xml', 'wb') as fout:
+                    fout.write(final_mpd)
 
-            os.system('aws s3 cp ' + pipe_dir + '/output.xml ' + out_key)
-            logging.info('mpd uploaded')
-            signed_mpd = get_signed_URI(out_key + 'output.xml')
-            logging.info('mpd signed, returning')
+                os.system('aws s3 cp ' + pipe_dir + '/output.xml ' + out_key)
+                logging.info('mpd uploaded')
+                signed_mpd = get_signed_URI(out_key + 'output.xml')
+                logging.info('mpd signed, returning')
 
-            return pipeline_pb2.PipelineReply(success=True, mpd_url=signed_mpd)
+                return pipeline_pb2.SubmitReply(success=True, mpd_url=signed_mpd)
+
+            else:
+                return pipeline_pb2.SubmitReply(success=False, error_msg='no output is found')
 
         except Exception as e:
-            return pipeline_pb2.PipelineReply(success=False, error_msg=traceback.format_exc())
+            return pipeline_pb2.SubmitReply(success=False, error_msg=traceback.format_exc())
 
 
 def serve():

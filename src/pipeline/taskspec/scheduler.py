@@ -54,11 +54,11 @@ class SimpleScheduler(object):
 
             if time.time() > last_print+1:
                 print_task_states(tasks)
-                logging.debug("buffer empty: "+str(buffer_empty)+', deliver empty: '+str(deliver_empty))
+                # logging.debug("buffer empty: "+str(buffer_empty)+', deliver empty: '+str(deliver_empty))
                 last_print = time.time()
             time.sleep(0.001)
             # sleep to avoid spinning, we can use notification instead, but so far, this works.
-            # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
+            # it may increase overall latency by at most n*0.001 second, where n is the longest path in the pipeline
 
         logging.info('finish scheduling pipeline')
 

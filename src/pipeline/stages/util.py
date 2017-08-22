@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import Queue
 import logging
+import pdb
+
 import libmu
 from config import settings
 
@@ -61,3 +63,11 @@ def pair_deliver_func(buffer_queue, deliver_queue, stale=False, **kwargs):
     if refreshed or not stale:
         for value in lineage_map.values():
             buffer_queue.put(value)
+
+
+def get_output_from_message(msg):
+    o_marker = '):OUTPUT('
+    c_marker = '):COMMAND('
+    if msg.count(o_marker) != 1 or msg.count(c_marker) != 1:
+        raise Exception('incorrect message format')
+    return msg[msg.find(o_marker)+len(o_marker):msg.find(c_marker)]

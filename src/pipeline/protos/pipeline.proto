@@ -3,17 +3,21 @@ syntax = "proto3";
 package pipeline;
 
 service Pipeline {
-  rpc Submit (PipelineRequest) returns (PipelineReply) {}
+  rpc Submit (SubmitRequest) returns (SubmitReply) {}
 }
 
-message PipelineRequest {
+message SubmitRequest {
   string pipeline_spec = 1;
-  repeated string input_urls = 2;
-  repeated string options = 3;
+  repeated Input inputs = 2;
 }
 
-message PipelineReply {
+message SubmitReply {
   bool success = 1;
   string mpd_url = 2;
   string error_msg = 3;
+}
+
+message Input {
+  string type = 1;
+  string value = 2;
 }
