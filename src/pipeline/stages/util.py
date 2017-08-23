@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import Queue
 import logging
+import pdb
+
 import libmu
 from config import settings
 
@@ -9,11 +11,12 @@ def get_default_event():
     return {
         "mode": 1
         , "port": settings['tracker_port']
-        , "addr": None  # server_launch will fill this in for us
+        , "addr": None  # tracker will fill this in for us
         , "nonblock": 0
         # , 'cacert': libmu.util.read_pem(settings['cacert_file']) if 'cacert_file' in settings else None
         , 'srvcrt': libmu.util.read_pem(settings['srvcrt_file']) if 'srvcrt_file' in settings else None
         , 'srvkey': libmu.util.read_pem(settings['srvkey_file']) if 'srvkey_file' in settings else None
+        , 'lambda_function': settings['default_lambda_function']
     }
 
 
@@ -60,3 +63,11 @@ def pair_deliver_func(buffer_queue, deliver_queue, stale=False, **kwargs):
     if refreshed or not stale:
         for value in lineage_map.values():
             buffer_queue.put(value)
+
+
+def get_output_from_message(msg):
+    o_marker = '):OUTPUT('
+    c_marker = '):COMMAND('
+    if msg.count(o_marker) != 1 or msg.count(c_marker) != 1:
+        raise Exception('incorrect message format')
+    return msg[msg.find(o_marker)+len(o_marker):msg.find(c_marker)]

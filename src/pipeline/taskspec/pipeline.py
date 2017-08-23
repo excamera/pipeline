@@ -63,12 +63,14 @@ def create_from_spec(pipe_spec):
     for node in pipe_spec.get('nodes', []):
         importlib.import_module('stages.' + node['stage'])
         init_state = eval('stages.' + node['stage']).InitState
+        event = node.get('event', stages.util.get_default_event())
+        event['lambda_function'] = node.get('lambda_function', settings['default_lambda_function'])
         pipe.add_stage(Pipeline.Stage(
             node['name']
-            , node.get('lambda_function', settings['default_lambda_function'])
+            , event['lambda_function']
             , init_state
             , node.get('config', {})
-            , node.get('event', stages.util.get_default_event())
+            , node.get('event', event)
             , deliver_func=getattr(stages.util, node.get('deliver_function', 'default_deliver_func'))
             , regions=None
         ))
