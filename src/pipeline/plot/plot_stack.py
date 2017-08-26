@@ -1,9 +1,12 @@
 import sys
+import pdb
+import re
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 
-cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect')
+
+cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl')
 
 # def plot_lines(lines):
 #     start = float(lines[0].split(',')[0])
@@ -37,22 +40,29 @@ cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect')
 
 
 def plot_stack(lines):
-    start = float(lines[0].split(',')[0])
-    data = OrderedDict()
+    assert lines[0].split(',')[1].strip() == 'starting pipeline'
+    assert lines[-1].split(',')[1].strip() == 'pipeline finished'
 
-    for i in xrange(1, len(lines)-1):
-        fields = lines[i].split(',')
-        k = fields[1].strip()
-        if not data.has_key(k):
-            data[k] = []
-        if fields[2].strip().startswith(cmd_of_interest):
+    start_ts = float(lines[0].split(',')[0])
+    data = OrderedDict()
+    for i in xrange(1, len(lines)-1):  # first, last lines excluded
+        fields = lines[i].split(',', 4)
+        ts = float(fields[0].strip())
+        lineage = fields[1].strip()
+        op = fields[2].strip()
+        msg = fields[3].strip()
+        if lineage == '0' or op != 'send':
+            continue
+        if not data.has_key(lineage):
+            data[lineage] = []
+        if msg.startswith(cmd_of_interest):
         #if True:
-            data[k].append((float(fields[0])-start, fields[2].strip().split(':')[0]))
+            data[lineage].append((ts-start_ts, msg[:10]))
 
     values = data.values()
     j = len(values[0])-1
     while j >= 0:
-        ts = map(lambda r: r[j][0], values)
+        ts = [r[j][0] for r in values]
         drawn_line = plt.stackplot(range(1, len(data)+1), ts)
         if j > 0:
             drawn_line[0].set_label(values[0][j-1][1] if values[0][j-1][1] != 'quit' else 'wait')
@@ -63,7 +73,7 @@ def plot_stack(lines):
     plt.legend(loc='best')
     plt.grid(b=True, axis='y')
     plt.ylabel('time (s)')
-    plt.xlabel('segment number')
+    plt.xlabel('lineage number')
     new_axis = plt.axis()
     plt.axis((new_axis[0], new_axis[1]*1.1, new_axis[2], new_axis[3]))
     plt.show()

@@ -4,6 +4,7 @@
       "name": "parlink",
       "stage": "parallelize_link",
       "config": {
+        "framesperchunk": "{fps} * 2"
       }
     },
     {
