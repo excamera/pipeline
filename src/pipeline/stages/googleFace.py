@@ -1,50 +1,82 @@
 #!/usr/bin/python
+import json
 import logging
-import libmu.util
-from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
-from stages.util import default_trace_func
+import pdb
+
+import math
+
+from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
+from config import settings
+from stages.util import default_trace_func, get_output_from_message, preprocess_config
 
 
-class FinalState(TerminalState):
-    extra = "(finished)"
-
-
-class EmitState(CommandListState):
-    extra = "(emit output)"
-    nextState = FinalState
-    commandlist = [ (None, "quit:")
-                  ]
+class FinalState(OnePassState):
+    extra = "(sending quit)"
+    expect = None
+    command = "quit:"
+    nextState = TerminalState
 
     def __init__(self, prevState):
-        super(EmitState, self).__init__(prevState, trace_func=default_trace_func)
-        emit = prevState.emit
-        out_key = prevState.out_key
+        super(FinalState, self).__init__(prevState)
 
-        emit('frames', {'metadata': self.in_events['frames']['metadata'], 'key': out_key})
+
+class EmitState(OnePassState):
+    extra = "(emit)"
+    expect = None
+    command = None
+    nextState = FinalState
+
+    def __init__(self, prevState):
+        super(EmitState, self).__init__(prevState)
+
+    def post_transition(self):
+        metadata = self.in_events['person']['metadata']
+        #config = preprocess_config(metadata['configs']['parlink'],
+        #                           {'fps': metadata['fps']})
+        #framesperchunk = config.get('framesperchunk', metadata['fps'])  # default to 1 second chunk
+        #overlap = config.get('overlap', 0)
+
+        #i = 0
+        #while i * (framesperchunk - overlap) / metadata['fps'] < self.local['duration']:
+        #    metacopy = metadata.copy()
+        #    starttime = i * (framesperchunk - overlap) / metadata['fps']
+        #    metacopy['lineage'] = str(i+1)
+        #self.emit_event('person', {'metadata': metadata,
+                                        #'key': self.in_events['person']['key']})
+        #                               'starttime': starttime,
+        #                               'frames': framesperchunk})
+        #    i += 1
+        return self.nextState(self)  # don't forget this
+
+
+class GetOutputState(OnePassState):
+    extra = "(check output)"
+    expect = 'OK:RETVAL(0'
+    command = None
+    nextState = EmitState
+
+    def __init__(self, prevState):
+        super(GetOutputState, self).__init__(prevState)
+
+    def post_transition(self):
+        #output = json.loads(get_output_from_message(self.messages[-1]))
+        #self.local['duration'] = output['duration']
+        #self.in_events['video_link']['metadata']['fps'] = output['fps']
+        return self.nextState(self)  # don't forget this
 
 
 class RunState(CommandListState):
     extra = "(run)"
-    nextState = EmitState
-    commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
-                  , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
-                  , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
-                  , ('OK:RETVAL(0)', 'run:cp -r ##TMPDIR##/in_0/*  ##TMPDIR##/out_0/.')
-                  ,('OK:RETVAL(0)','run:python googleFace_s3.py '+\
-			'"{person}" 5 ##TMPDIR##')
-                  , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
-                  , ('OK:EMIT', None)
-                    ]
+    nextState = GetOutputState
+    commandlist = [(None, 'run: python googleFace_init_s3.py "{person}" 5 ##TMPDIR##')
+                   # output will be used in latter states
+                   ]
 
     def __init__(self, prevState):
-        super(RunState, self).__init__(prevState, trace_func=default_trace_func)
-        self.emit = prevState.emit
-        self.out_key = prevState.out_key
+        super(RunState, self).__init__(prevState)
 
-        params = {'in_key': self.in_events['frames']['key'], 'out_key': self.out_key,
-		'person': str(self.in_events['frames']['metadata']['configs']['googleFace']['person'])}
-        logging.debug('params: '+str(params))
-        self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
+        params = {'person': self.in_events['person']['key']}
+        self.commands = [s.format(**params) if s is not None else None for s in self.commands]
 
 
 class InitState(CommandListState):
@@ -56,8 +88,6 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, emit):
-        super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
-        self.emit = emit
-        self.out_key = 's3://liz-pipeline/'+in_events['frames']['metadata']['pipe_id']+'/googleFace/'+libmu.util.rand_str(16)+'/'
-        logging.debug('in_events: '+str(in_events)+', emit: '+str(emit))
+    def __init__(self, prevState, in_events, emit_event):
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, trace_func=default_trace_func)
+        logging.debug('in_events: '+str(in_events))

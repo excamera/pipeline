@@ -1,22 +1,30 @@
 {
   "nodes":[
     {
-      "name": "decode",
-      "stage": "decode_from_url",
+      "name": "parlink",
+      "stage": "parallelize_link",
       "config": {
-	"youtube":"https://www.youtube.com/watch?v=z9RBALOraws"	
       }
     },
     {
       "name": "googleFace",
       "stage": "googleFace",
-      "config": { "person":"Thor Chris Avengers"
+      "lambda_function": "tempc_aZuk4McU",
+      "config": {
+      }
+    },
+    {
+      "name": "decode",
+      "stage": "decode_from_chunked_link",
+      "config": {
       }
     },
     {
       "name": "rek",
       "stage": "rek",
+      "lambda_function": "tempc_aZuk4McU",
       "config": {
+	"person":"Thor"
       }
     },
     {
@@ -30,18 +38,21 @@
   "streams":
   [
     {
-      "src": "input_0:video_url",
-      "dst": "decode:video_url"
+      "src": "input_0:video_link",
+      "dst": "parlink:video_link"
+    },
+    {
+      "src": "input_1:person",
+      "dst": "googleFace:person"
+    },
+    {
+      "src": "parlink:chunked_link",
+      "dst": "decode:chunked_link"
     },
     {
       "src": "decode:frames",
-      "dst": "googleFace:frames"
-    },
-    {
-      "src": "googleFace:frames",
       "dst": "rek:frames"
     },
-
     {
       "src": "rek:frames",
       "dst": "encode:frames"
