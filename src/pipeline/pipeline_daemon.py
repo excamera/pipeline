@@ -1,3 +1,4 @@
+import argparse
 import sys
 import os
 import signal
@@ -29,8 +30,14 @@ def shutdown(*args):
 
 
 def main():
-    logging.basicConfig(level=logging.INFO,
-                        format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)d - %(message)s")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--log", help="logging level", default='INFO')
+    args, _ = parser.parse_known_args()
+    numeric_level = getattr(logging, args.log.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % args.log)
+
+    logging.basicConfig(level=numeric_level, format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)d - %(message)s")
 
     logging.debug("config: %s", settings)
 

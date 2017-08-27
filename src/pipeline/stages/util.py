@@ -20,15 +20,12 @@ def get_default_event():
     }
 
 
-def default_trace_func(in_events, msg):
-    """Log every command message sent by the stage.
-    A command is executed after worker receives it,
-    and response from worker can trigger next command,
-    so time interval between two commands is a time
-    upper bound for first command
+def default_trace_func(in_events, msg, op):
+    """Log every command message sent/recv by the state machine.
+    op includes send/recv/undo_recv/kick
     """
     logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
-    logger.debug(in_events.values()[0]['metadata']['lineage'] + ', ' + msg.split()[0])
+    logger.debug('%s, %s, %s', in_events.values()[0]['metadata']['lineage'], op, msg.replace('\n', '\\n'))
 
 
 def default_deliver_func(buffer_queue, deliver_queue, **kwargs):
@@ -71,3 +68,15 @@ def get_output_from_message(msg):
     if msg.count(o_marker) != 1 or msg.count(c_marker) != 1:
         raise Exception('incorrect message format')
     return msg[msg.find(o_marker)+len(o_marker):msg.find(c_marker)]
+
+
+def preprocess_config(config, existing):
+    new_config = {}
+    for k, v in config.iteritems():
+        new_value = v.format(**existing)
+        try:
+            new_value = eval(new_value)
+        except:
+            pass
+        new_config[k] = new_value
+    return new_config
