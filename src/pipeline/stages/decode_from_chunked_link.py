@@ -87,8 +87,8 @@ class InitState(CommandListState):
         , None
                    ]
 
-    def __init__(self, prevState, in_events, emit_event):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, trace_func=default_trace_func)
+    def __init__(self, prevState, in_events, emit_event, config):
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=default_trace_func)
         self.local['out_key'] = settings['storage_base'] + in_events['chunked_link']['metadata'][
             'pipe_id'] + '/decode/' + libmu.util.rand_str(16) + '/'
         logging.debug('in_events: ' + str(in_events))

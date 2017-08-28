@@ -50,7 +50,7 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, emit):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit, trace_func=default_trace_func)
+    def __init__(self, prevState, in_events, emit, config):
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit, trace_func=default_trace_func, config=config)
         self.local['out_key'] = settings['storage_base']+in_events['frames']['metadata']['pipe_id']+'/grayscale/'+libmu.util.rand_str(16)+'/'
         logging.debug('in_events: '+str(in_events))

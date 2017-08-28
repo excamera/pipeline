@@ -23,8 +23,8 @@
       "name": "rek",
       "stage": "rek",
       "lambda_function": "tempc_aZuk4McU",
+      "deliver_function": "anypair_deliver_func",
       "config": {
-	"person":"Thor"
       }
     },
     {
@@ -45,6 +45,12 @@
       "src": "input_1:person",
       "dst": "googleFace:person"
     },
+    {
+      "src": "googleFace:image_url",
+      "dst": "rek:image_url",
+      "unconsumeable": true
+    },
+
     {
       "src": "parlink:chunked_link",
       "dst": "decode:chunked_link"

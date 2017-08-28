@@ -24,12 +24,9 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             pipe = pipeline.create_from_spec(json.loads(request.pipeline_spec))
 
             for index in range(len(request.inputs)):
-                configs = {}
-                for k, v in pipe.stages.iteritems():
-                    configs[k] = v.conf
                 in_event = {'key': request.inputs[index].value,
-                            'metadata': {'pipe_id': pipe.pipe_id, 'configs': configs, 'lineage': '0'}}
-                pipe.inputs['input_' + str(index)]['dst_node'].put({request.inputs[index].type: in_event})
+                            'metadata': {'pipe_id': pipe.pipe_id, 'lineage': '0'}}
+                pipe.inputs['input_' + str(index)][1].put({request.inputs[index].type: in_event})
                 # put events to the buffer queue of all input stages
 
             pipe_dir = 'logs/' + pipe.pipe_id
@@ -44,11 +41,11 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             logger.addHandler(handler)
 
             logger.info('starting pipeline')
-            sched = getattr(taskspec.scheduler, settings.get(settings['scheduler'], 'SimpleScheduler'))
+            sched = getattr(taskspec.scheduler, settings.get('scheduler', 'SimpleScheduler'))
             sched.schedule(pipe)
             logger.info('pipeline finished')
 
-            result_queue = pipe.outputs.values()[0]['dst_node']  # should be only one output queue
+            result_queue = pipe.outputs.values()[0][1]  # there should be only one output queue
 
             num_m4s = 0
             out_key = None
