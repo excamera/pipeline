@@ -41,6 +41,9 @@ class Pipeline(object):
         self.inputs = {}
         self.outputs = {}
 
+        self.scrub_bar_time = 0.0
+        self.tasks = []
+
     def __str__(self):
         return "Pipeline: %s, stages: %s, inputs: %s, outputs: %s" % (
             self.pipe_id, self.stages.keys(), self.inputs.keys(), self.outputs.keys())
@@ -49,6 +52,7 @@ class Pipeline(object):
         if self.stages.has_key(stage.key):
             raise Exception('existing stage key')
         self.stages[stage.key] = stage
+
 
     # def add_downstream(self, src_stage, downstream, key):
     #     if not isinstance(src_stage, Pipeline.Stage):

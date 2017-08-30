@@ -3,13 +3,15 @@ import logging
 import os
 import pdb
 import traceback
-from concurrent import futures
+
 import grpc
+from concurrent import futures
+
 import pipeline_pb2
 import pipeline_pb2_grpc
+import schedule
 from config import settings
 from taskspec import pipeline
-import taskspec.scheduler
 from util.amend_mpd import amend_mpd
 from util.media_probe import get_signed_URI
 
@@ -19,7 +21,6 @@ _server = None
 class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
     def Submit(self, request, context):
         logging.info('PipelineServer handling submit request')
-
         try:
             pipe = pipeline.create_from_spec(json.loads(request.pipeline_spec))
 
@@ -39,9 +40,8 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             logger.propagate = False
             logger.setLevel(logging.DEBUG)
             logger.addHandler(handler)
-
             logger.info('starting pipeline')
-            sched = getattr(taskspec.scheduler, settings.get('scheduler', 'SimpleScheduler'))
+            sched = getattr(schedule, settings.get('scheduler', 'SimpleScheduler'))
             sched.schedule(pipe)
             logger.info('pipeline finished')
 

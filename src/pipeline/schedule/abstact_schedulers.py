@@ -4,24 +4,17 @@ import Queue
 import logging
 import time
 import pdb
-
+from config import settings
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
+from schedule.util import print_task_states
 from stages.util import default_deliver_func
 
 
-def print_task_states(tasks):
-    out_msg = str(len(tasks))+' tasks running:\n'
-    for i in range(0, len(tasks), 4):
-        out_msg += str([str(t) for t in tasks[i:i+4]])+'\n'
-    logging.info(out_msg)
-
-
-class SimpleScheduler(object):
-    """A simple scheduler that scans every stage for events and submit any available tasks"""
+class SchedulerBase(object):
     @classmethod
     def schedule(cls, pipeline):
-        logging.info('start scheduling pipeline')
+        logging.info('start scheduling pipeline: %s', pipeline.pipe_id)
         last_print = 0
         tasks = []
         while True:
@@ -33,13 +26,8 @@ class SimpleScheduler(object):
                     buffer_empty = False
                     stage.deliver_func(stage.buffer_queues, stage.deliver_queue, stale=len(tasks) == 0 and stage.deliver_queue.empty())
 
-            for key, stage in pipeline.stages.iteritems():
-                while not stage.deliver_queue.empty():
-                    deliver_empty = False
-                    t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.emit, stage.event, stage.config, regions=['us-east-1'])
-                    tasks.append(t)
-                    tracker.Tracker.submit(t)
-                    logging.debug('submitted a task: '+str(t))
+            if cls.submit_tasks(pipeline, tasks) != 0:
+                deliver_empty = False
 
             error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
             if len(error_tasks) > 0:
@@ -62,54 +50,86 @@ class SimpleScheduler(object):
 
         logging.info('finish scheduling pipeline')
 
-
-class BarrierScheduler(object):
-    """Imagine an invisible barrier between stages"""
     @classmethod
-    def schedule(cls, pipeline):
-        logging.info('start scheduling pipeline')
-        last_print = 0
-        tasks = []
-        count = 0
-        while True:
-            buffer_empty = True
-            deliver_empty = True
-            for key, stage in pipeline.stages.iteritems():
-                stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
-                if not stage.buffer_queues.values()[0].empty():
-                    if count == 0:
-                        count = stage.buffer_queues.values()[0].qsize()
-                    buffer_empty = False
-                    stage.deliver_func(stage.buffer_queues, stage.deliver_queue)
+    def submit_tasks(cls, pipeline, submitted):
+        raise NotImplementedError()
 
-            for key, stage in pipeline.stages.iteritems():
-                if stage.deliver_queue.qsize() == count:
-                    while not stage.deliver_queue.empty():
-                        deliver_empty = False
-                        t = tracker.Task(stage.lambda_function, stage.init_state, stage.deliver_queue.get(), stage.emit, stage.event, stage.config)
-                        tasks.append(t)
-                        tracker.Tracker.submit(t)
-                        logging.debug('submitted a task: '+str(t))
 
-            error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
-            if len(error_tasks) > 0:
-                logging.error(str(len(error_tasks))+" tasks failed: ")
-                for et in error_tasks:
-                    logging.error(et.current_state.str_extra())
-                raise Exception(str(len(error_tasks))+" tasks failed")
-            tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
+class ThrottledScheduler(SchedulerBase):
 
-            if buffer_empty and deliver_empty and len(tasks) == 0:
-                break
+    @classmethod
+    def submit_tasks(cls, pipeline, submitted):
+        count_submitted = 0
+        quota = cls.get_quota(pipeline)
+        for t in cls.task_gen(pipeline, quota):
+            submitted.append(t)
+            pipeline.tasks.append(t)
+            tracker.Tracker.submit(t)
+            count_submitted += 1
+            logging.debug('submitted a task: %s', t)
+        cls.consume_quota(pipeline, count_submitted)
+        return count_submitted
 
-            if time.time() > last_print+1:
-                print_task_states(tasks)
-                last_print = time.time()
-            time.sleep(0.001)
-            # sleep to avoid spinning, we can use notification instead, but so far, this works.
-            # it may increase overall latency by at most n*0.001 second, where n is length of pipeline
+    @classmethod
+    def get_quota(cls, pipeline):
+        raise NotImplementedError()
 
-        logging.info('finish scheduling pipeline')
+    @classmethod
+    def consume_quota(cls, pipeline, n):
+        raise NotImplementedError()
+
+    @classmethod
+    def task_gen(cls, pipeline, n):
+        raise NotImplementedError()
+
+
+class ConcurrencyLimitScheduler(ThrottledScheduler):
+    concurrency_limit = settings.get('concurrency_limit', 1500)
+
+    @classmethod
+    def get_quota(cls, pipeline):
+        running = [t for t in pipeline.tasks if not (isinstance(t.current_state, TerminalState) or
+                                                     isinstance(t.current_state, ErrorState))]
+        return cls.concurrency_limit - len(running)
+
+    @classmethod
+    def consume_quota(cls, pipeline, n):
+        pass
+
+    @classmethod
+    def task_gen(cls, pipeline, n):
+        raise NotImplementedError()
+
+
+class RequestRateLimitScheduler(ThrottledScheduler):
+    bucket_size = settings.get('rate_limit_bucket_size', 50)
+    refill_rate = settings.get('rate_limit_refill_rate', 50)  # 50/s
+    available_token = 0  # initially 0 token
+    last_refill = 0
+
+    @classmethod
+    def refill(cls):
+        cls.available_token = int(round(max(cls.available_token + (time.time() - cls.last_refill) * cls.refill_rate, cls.bucket_size)))
+        cls.last_refill = time.time()
+
+    @classmethod
+    def get_quota(cls, pipeline):
+        cls.refill()
+        return cls.available_token
+
+    @classmethod
+    def consume_quota(cls, pipeline, n):
+        cls.refill()
+        consumed = max(cls.available_token, n)
+        cls.available_token -= consumed
+        return consumed
+
+    @classmethod
+    def task_gen(cls, pipeline, n):
+        raise NotImplementedError()
+
+
+
 #
 #
 # class LadderScheduler(object):
