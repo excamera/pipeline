@@ -4,8 +4,8 @@ import logging
 
 import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
-from config import settings
-from stages.util import default_trace_func
+from pipeline.config import settings
+from pipeline.stages.util import default_trace_func
 
 
 class FinalState(OnePassState):

@@ -2,7 +2,7 @@
 import logging
 
 from libmu import tracker
-from schedule.abstact_schedulers import SchedulerBase
+from pipeline.schedule.abstact_schedulers import SchedulerBase
 
 
 class SimpleScheduler(SchedulerBase):

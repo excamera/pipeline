@@ -5,7 +5,7 @@ import subprocess
 
 import boto3
 
-from .s3signurl import sign
+from pipeline.util.s3signurl import sign
 
 def get_signed_URI(URI):
     if URI.startswith('s3://'):
@@ -19,10 +19,14 @@ def get_all_info(URI):
     return results.stdout.readlines()
 
 
-def get_duration(URI):
-    output = get_all_info(URI)
+def get_duration_from_output_lines(output):
     iso_time = [v for v in output if "Duration" in v][0].split(',')[0].strip().split(' ')[1]
-    return sum(x * int(t) for x, t in zip([3600, 60, 1], iso_time.split('.')[0].split(":")))+float('.'+iso_time.split('.')[1])
+    return sum(x * int(t) for x, t in zip([3600, 60, 1], iso_time.split('.')[0].split(":"))) + float(
+        '.' + iso_time.split('.')[1])
+
+
+def get_duration(URI):
+    return get_duration_from_output_lines(get_all_info(URI))
 
 
 def get_fps(URI):

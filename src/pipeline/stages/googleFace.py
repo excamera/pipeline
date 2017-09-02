@@ -6,8 +6,8 @@ import pdb
 import math
 
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
-from config import settings
-from stages.util import default_trace_func, get_output_from_message, preprocess_config
+from pipeline.config import settings
+from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config
 
 
 class FinalState(OnePassState):

@@ -1,12 +1,15 @@
 #!/usr/bin/python
+import os
+import sys
 import argparse
 import logging
-import pdb
-import subprocess
 import grpc
 
-from config import settings
-from service import pipeline_pb2_grpc, pipeline_pb2
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../external/mu/src/lambdaize/')
+from pipeline.config import settings
+from pipeline.service import pipeline_pb2_grpc, pipeline_pb2
+
+import pdb
 
 
 def invoke_pipeline(args):

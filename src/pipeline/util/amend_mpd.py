@@ -2,7 +2,7 @@
 
 import xml.etree.ElementTree as ET
 
-from .media_probe import get_signed_URI
+from pipeline.util.media_probe import get_signed_URI
 
 def amend_mpd(init_mpd, duration, baseURL, num_m4s):
     prefix = "urn:mpeg:dash:schema:mpd:2011"

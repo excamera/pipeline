@@ -6,12 +6,13 @@ import logging
 import time
 import pdb
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__))+'/../../external/mu/src/lambdaize/')
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../external/mu/src/lambdaize/')
 
 import libmu.util
 import libmu.config
-from config import settings
-from service import pipeline_server
+import pipeline
+from pipeline.config import settings
+from pipeline.service import pipeline_server
 
 
 def start_daemon():

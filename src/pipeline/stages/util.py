@@ -4,7 +4,7 @@ import logging
 import pdb
 
 import libmu
-from config import settings
+from pipeline.config import settings
 
 
 def get_default_event():
