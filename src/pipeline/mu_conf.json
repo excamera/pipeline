@@ -1,8 +1,0 @@
-{
-    "aws_access_key_id_file": "/home/aolx/devel/ssl/access_key"
-  , "aws_secret_access_key_file": "/home/aolx/devel/ssl/secret_key"
-  , "srvcrt_file": "/home/aolx/devel/ssl/server_cert.pem"
-  , "srvkey_file": "/home/aolx/devel/ssl/server_key.pem"
-  , "port_number": 13580
-  , "backlog": 3000
-}

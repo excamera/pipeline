@@ -10,7 +10,6 @@ from libmu.machine_state import ErrorState, TerminalState
 from schedule.util import print_task_states
 from stages.util import default_deliver_func
 
-
 class SchedulerBase(object):
     @classmethod
     def schedule(cls, pipeline):
@@ -23,7 +22,10 @@ class SchedulerBase(object):
             for key, stage in pipeline.stages.iteritems():
                 stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
                 if any([not q.empty() for q in stage.buffer_queues.values()]):
-                    buffer_empty = False
+
+                    if type(q) is Queue.Queue:
+                        buffer_empty = False
+
                     stage.deliver_func(stage.buffer_queues, stage.deliver_queue, stale=len(tasks) == 0 and stage.deliver_queue.empty())
 
             if cls.submit_tasks(pipeline, tasks) != 0:
@@ -36,6 +38,7 @@ class SchedulerBase(object):
                     logging.error(et.current_state.str_extra())
                 raise Exception(str(len(error_tasks))+" tasks failed")
             tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
+
 
             if buffer_empty and deliver_empty and len(tasks) == 0:
                 break

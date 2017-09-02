@@ -68,7 +68,7 @@ class GetOutputState(OnePassState):
 class RunState(CommandListState):
     extra = "(run)"
     nextState = GetOutputState
-    commandlist = [(None, 'run:./youtube-dl -j {link}')
+    commandlist = [(None, 'run:./youtube-dl -j {link} 2>/dev/null')
                    # output will be used in latter states
                    ]
 

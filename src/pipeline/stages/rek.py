@@ -28,7 +28,7 @@ class RunState(CommandListState):
                   , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'run: python lambdaRek_opt_mt.py ' +\
-                          '"{person}.jpg" ##TMPDIR##/in_0/*.png ##TMPDIR##/out_0/ 30 70 5 0.1')
+                          '"{person}.jpg" ##TMPDIR##/in_0/*.png ##TMPDIR##/out_0/ 300 70 5 0.1') #for _opt_mt
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)
                     ]
@@ -37,8 +37,8 @@ class RunState(CommandListState):
         super(RunState, self).__init__(prevState)
 
         params = {'in_key': self.in_events['frames']['key'], 'out_key': self.local['out_key'],
-                #'person':self.in_events['image_url']['key']}
-                'person':self.in_events['frames']['metadata']['configs']['rek']['person']}
+                'person':self.in_events['person']['key']}
+                #'person':self.in_events['frames']['metadata']['configs']['rek']['person']}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
@@ -52,9 +52,9 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, emit):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit, trace_func=default_trace_func)
-        self.person = self.in_events['frames']['metadata']['configs']['rek']['person']
-        #self.person = self.in_events['image_url']['key']
+    def __init__(self, prevState, in_events, emit, config):
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit,config=config, trace_func=default_trace_func)
+        #self.person = self.in_events['frames']['metadata']['configs']['rek']['person']
+        self.person = self.in_events['person']['key']
         self.local['out_key'] = settings['storage_base']+in_events['frames']['metadata']['pipe_id']+'/rek/'+libmu.util.rand_str(16)+'/'
         logging.debug('in_events: '+str(in_events))

@@ -9,7 +9,7 @@
     {
       "name": "googleFace",
       "stage": "googleFace",
-      "lambda_function": "tempc_aZuk4McU",
+      "lambda_function": "tempc_Y97xel9I",
       "config": {
       }
     },
@@ -22,7 +22,7 @@
     {
       "name": "rek",
       "stage": "rek",
-      "lambda_function": "tempc_aZuk4McU",
+      "lambda_function": "tempc_Y97xel9I",
       "deliver_function": "anypair_deliver_func",
       "config": {
       }
@@ -46,11 +46,10 @@
       "dst": "googleFace:person"
     },
     {
-      "src": "googleFace:image_url",
-      "dst": "rek:image_url",
+      "src": "googleFace:person",
+      "dst": "rek:person",
       "unconsumeable": true
     },
-
     {
       "src": "parlink:chunked_link",
       "dst": "decode:chunked_link"

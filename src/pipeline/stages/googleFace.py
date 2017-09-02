@@ -31,21 +31,8 @@ class EmitState(OnePassState):
 
     def post_transition(self):
         metadata = self.in_events['person']['metadata']
-        #config = preprocess_config(metadata['configs']['parlink'],
-        #                           {'fps': metadata['fps']})
-        #framesperchunk = config.get('framesperchunk', metadata['fps'])  # default to 1 second chunk
-        #overlap = config.get('overlap', 0)
-
-        #i = 0
-        #while i * (framesperchunk - overlap) / metadata['fps'] < self.local['duration']:
-        #    metacopy = metadata.copy()
-        #    starttime = i * (framesperchunk - overlap) / metadata['fps']
-        #    metacopy['lineage'] = str(i+1)
-        #self.emit_event('person', {'metadata': metadata,
-                                        #'key': self.in_events['person']['key']})
-        #                               'starttime': starttime,
-        #                               'frames': framesperchunk})
-        #    i += 1
+        self.emit_event('person', {'metadata': metadata,
+                                       'key': self.in_events['person']['key']})
         return self.nextState(self)  # don't forget this
 
 
@@ -59,9 +46,6 @@ class GetOutputState(OnePassState):
         super(GetOutputState, self).__init__(prevState)
 
     def post_transition(self):
-        #output = json.loads(get_output_from_message(self.messages[-1]))
-        #self.local['duration'] = output['duration']
-        #self.in_events['video_link']['metadata']['fps'] = output['fps']
         return self.nextState(self)  # don't forget this
 
 
@@ -88,6 +72,6 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, emit_event):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, trace_func=default_trace_func)
+    def __init__(self, prevState, in_events, emit_event,config):
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event,config=config, trace_func=default_trace_func)
         logging.debug('in_events: '+str(in_events))

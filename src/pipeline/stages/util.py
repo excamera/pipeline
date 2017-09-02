@@ -77,7 +77,7 @@ def pair_deliver_func(buffer_queues, deliver_queue, **kwargs):
 def anypair_deliver_func(buffer_queues, deliver_queue, **kwargs):
     """merge any pairs from different channel and deliver them"""
     assert len(buffer_queues) == 2  # TODO: add validator when creating pipe
-    while not buffer_queues.values()[0].empty() and not buffer_queues[1].empty():
+    while not buffer_queues.values()[0].empty() and not buffer_queues.values()[1].empty():
         event0 = buffer_queues.values()[0].get()
         event1 = buffer_queues.values()[1].get()
         paired_event = {}
