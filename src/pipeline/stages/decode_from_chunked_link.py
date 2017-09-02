@@ -61,7 +61,7 @@ class RunState(CommandListState):
     extra = "(run)"
     nextState = CheckOutputState
     commandlist = [(None, 'run:mkdir -p ##TMPDIR##/out_0/')
-        , ('OK:RETVAL(0)', 'run:./youtube-dl -f "(mp4)" --get-url {URL} | head -n1 | xargs -IPLACEHOLDER '
+        , ('OK:RETVAL(0)', 'run:./youtube-dl -f "(mp4)" --get-url {URL} 2>/dev/null | head -n1 | xargs -IPLACEHOLDER '
                            './ffmpeg -y -ss {starttime} -i PLACEHOLDER -frames {frames} -f image2 -c:v png '
                            '-start_number 1 ##TMPDIR##/out_0/%08d.png')
         , ('OK:RETVAL(0)', 'run:test `find ##TMPDIR##/out_0/ -name "*png" | wc -l` -gt 0')
