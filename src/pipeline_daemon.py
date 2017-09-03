@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../external/mu/
 
 import libmu.util
 import libmu.config
-import pipeline
 from pipeline.config import settings
 from pipeline.service import pipeline_server
 

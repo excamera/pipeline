@@ -2,29 +2,33 @@
 import copy
 import Queue
 import threading
+from collections import deque
 
 
 class UnconsumeableQueue(object):
 
     def __init__(self):
-        self._set = False
-        self._element = None
+        self.queue = deque()
         self._lock = threading.Lock()
 
     def put(self, e):
         with self._lock:
-            if self._set:
+            if len(self.queue) > 0:
                 raise Queue.Full()
-            self._element = e
-            self._set = True
+            self.queue.append(e)
 
     def get(self):
-        if not self._set:
-            raise Queue.Empty()
-        return copy.deepcopy(self._element)
+        with self._lock:
+            if len(self.queue) == 0:
+                raise Queue.Empty()
+            return copy.deepcopy(self.queue[0])
 
     def empty(self):
-        return not self._set
+        return len(self.queue) == 0
 
     def full(self):
-        return self._set
+        return len(self.queue) > 0
+
+    def clear(self):
+        with self._lock:
+            self.queue.clear()
