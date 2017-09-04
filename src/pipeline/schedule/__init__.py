@@ -1,7 +1,6 @@
-from simple_scheduler import *
-#from priority_scheduler import *
-
 import logging
+
+__all__ = ['simple_scheduler']
 
 
 def print_task_states(tasks):

@@ -6,7 +6,8 @@ import traceback
 import grpc
 from concurrent import futures
 
-import pipeline.schedule
+import pipeline
+from pipeline.schedule import *
 from pipeline.service import pipeline_pb2
 from pipeline.service import pipeline_pb2_grpc
 from pipeline.config import settings
@@ -15,6 +16,7 @@ from pipeline.util.media_probe import get_signed_URI
 import pdb
 
 _server = None
+
 
 class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
     def Submit(self, request, context):
@@ -38,8 +40,12 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             logger.propagate = False
             logger.setLevel(logging.DEBUG)
             logger.addHandler(handler)
+
+            conf_sched = settings.get('scheduler', 'SimpleScheduler')
+            candidates = [s for s in dir(pipeline.schedule) if hasattr(vars(pipeline.schedule)[s], conf_sched)]
+            sched = getattr(vars(pipeline.schedule)[candidates[0]], conf_sched)  # only consider the first match
+
             logger.info('starting pipeline')
-            sched = getattr(pipeline.schedule, settings.get('scheduler', 'SimpleScheduler'))
             sched.schedule(pipe)
             logger.info('pipeline finished')
 

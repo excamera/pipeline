@@ -3,13 +3,12 @@ import Queue
 
 import logging
 import time
-import pdb
 from pipeline.config import settings
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
-from pipeline.schedule import print_task_states
 from pipeline.stages.util import default_deliver_func
-
+from . import print_task_states
+import pdb
 
 class SchedulerBase(object):
     @classmethod
