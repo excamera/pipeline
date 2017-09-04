@@ -7,7 +7,7 @@ import pdb
 from pipeline.config import settings
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
-from pipeline.schedule.util import print_task_states
+from pipeline.schedule import print_task_states
 from pipeline.stages.util import default_deliver_func
 
 
