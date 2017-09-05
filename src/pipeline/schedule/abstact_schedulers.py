@@ -10,6 +10,7 @@ from pipeline.stages.util import default_deliver_func
 from . import print_task_states
 import pdb
 
+
 class SchedulerBase(object):
     @classmethod
     def schedule(cls, pipeline):
@@ -23,7 +24,9 @@ class SchedulerBase(object):
                 stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
                 if any([not q.empty() for q in stage.buffer_queues.values()]):
                     buffer_empty = False
-                    stage.deliver_func(stage.buffer_queues, stage.deliver_queue, stale=len(tasks) == 0 and stage.deliver_queue.empty())
+                    stage.deliver_func(stage.buffer_queues, stage.deliver_queue,
+                                       stale=len(tasks) == 0 and stage.deliver_queue.empty(),
+                                       stage_conf=stage.config, stage_context=stage.context)
 
             if cls.submit_tasks(pipeline, tasks) != 0:
                 deliver_empty = False

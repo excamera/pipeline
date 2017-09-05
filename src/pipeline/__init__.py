@@ -25,6 +25,7 @@ class Pipeline(object):
             self.downstream_map = {}
             self.buffer_queues = {}
             self.deliver_queue = Queue.Queue()
+            self.context = {}
 
         def __str__(self):
             return "Stage: %s, init_state: %s, downstreams: %s, deliver_func: %s" % (
