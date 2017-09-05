@@ -64,4 +64,5 @@ Makefile.in
 .idea/
 src/pipeline/service/pipeline_pb2.py
 src/pipeline/service/pipeline_pb2_grpc.py
-src/pipeline/logs/
+src/logs/
+src/interesting_logs/
