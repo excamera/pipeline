@@ -7,7 +7,7 @@ from pipeline.config import settings
 import libmu
 import pipeline.stages
 import pipeline.stages.util
-from pipeline.util.uncomsumeable_queue import UnconsumeableQueue
+from pipeline.util.durable_queue import DurableQueue
 import pdb
 
 
@@ -89,14 +89,14 @@ def create_from_spec(pipe_spec):
         src_key = stream['src'].split(':')[1]
         dst_node = stream['dst'].split(':')[0]
         dst_key = stream['dst'].split(':')[1]
-        unconsumeable = stream.get('unconsumeable')
+        durable = stream.get('durable')
 
         if src_node is '' or src_key is '' or dst_node is '' or dst_key is '':
             raise Exception('stream format error: %s', stream)
 
         if src_node.startswith('input'):
             if not pipe.stages[dst_node].buffer_queues.has_key(dst_key):
-                pipe.stages[dst_node].buffer_queues[dst_key] = UnconsumeableQueue() if unconsumeable is True else Queue.Queue()
+                pipe.stages[dst_node].buffer_queues[dst_key] = DurableQueue() if durable is True else Queue.Queue()
             pipe.inputs[src_node] = (dst_key, pipe.stages[dst_node].buffer_queues[dst_key])  # each input src should only have one key
         elif dst_node.startswith('output'):
             if not pipe.outputs.has_key(dst_node):
@@ -106,7 +106,7 @@ def create_from_spec(pipe_spec):
             if pipe.stages[src_node].downstream_map.has_key(src_key):
                 raise Exception('existing src key: %s', stream)
             if not pipe.stages[dst_node].buffer_queues.has_key(dst_key):
-                pipe.stages[dst_node].buffer_queues[dst_key] = UnconsumeableQueue() if unconsumeable is True else Queue.Queue()
+                pipe.stages[dst_node].buffer_queues[dst_key] = DurableQueue() if durable is True else Queue.Queue()
             pipe.stages[src_node].downstream_map[src_key] = (dst_key, pipe.stages[dst_node].buffer_queues[dst_key])
 
     return pipe

@@ -5,7 +5,7 @@ import threading
 from collections import deque
 
 
-class UnconsumeableQueue(object):
+class DurableQueue(object):
 
     def __init__(self):
         self.queue = deque()
