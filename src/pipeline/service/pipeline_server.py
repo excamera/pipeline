@@ -43,6 +43,9 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
 
             conf_sched = settings.get('scheduler', 'SimpleScheduler')
             candidates = [s for s in dir(pipeline.schedule) if hasattr(vars(pipeline.schedule)[s], conf_sched)]
+            if len(candidates) == 0:
+                logging.error("scheduler %s not found", conf_sched)
+                raise ValueError("scheduler %s not found" % conf_sched)
             sched = getattr(vars(pipeline.schedule)[candidates[0]], conf_sched)  # only consider the first match
 
             logger.info('starting pipeline')
