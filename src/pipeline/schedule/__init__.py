@@ -1,6 +1,6 @@
 import logging
 
-__all__ = ['simple_scheduler', 'priority_scheduler', 'breadth_first_scheduler']
+__all__ = ['simple_scheduler', 'priority_scheduler', 'breadth_first_scheduler', 'random_scheduler']
 
 
 def print_task_states(tasks):
