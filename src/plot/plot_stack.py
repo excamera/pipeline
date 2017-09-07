@@ -39,7 +39,7 @@ cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect',
 #     plt.show()
 
 
-def plot_stack(lines):
+def plot_stack(lines, chunk_length=None):
     assert lines[0].split(',')[1].strip() == 'starting pipeline'
     assert lines[-1].split(',')[1].strip() == 'pipeline finished'
 
@@ -63,7 +63,10 @@ def plot_stack(lines):
     j = len(values[0])-1
     while j >= 0:
         ts = [r[j][0] for r in values]
-        drawn_line = plt.stackplot(range(1, len(data)+1), ts)
+        if chunk_length:
+            drawn_line = plt.stackplot([chunk_length * x for x in xrange(1, len(data)+1)], ts)
+        else:
+            drawn_line = plt.stackplot(xrange(1, len(data)+1), ts)
         if j > 0:
             drawn_line[0].set_label(values[0][j-1][1] if values[0][j-1][1] != 'quit' else 'wait')
         else:
@@ -72,8 +75,11 @@ def plot_stack(lines):
 
     plt.legend(loc='best')
     plt.grid(b=True, axis='y')
-    plt.ylabel('time (s)')
-    plt.xlabel('lineage number')
+    plt.ylabel('process time (s)')
+    if chunk_length:
+        plt.xlabel('video time (s)')
+    else:
+        plt.xlabel('lineage number')
     new_axis = plt.axis()
     plt.axis((new_axis[0], new_axis[1]*1.1, new_axis[2], new_axis[3]))
     plt.show()
@@ -83,4 +89,9 @@ if __name__ == '__main__':
     with open(sys.argv[1], 'r') as f:
         lines = f.readlines()
 
-    plot_stack(lines)
+    if len(sys.argv) == 3:
+        chunk_length = float(sys.argv[2])
+    else:
+        chunk_length = None
+
+    plot_stack(lines, chunk_length)
