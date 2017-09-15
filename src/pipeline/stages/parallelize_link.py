@@ -83,7 +83,7 @@ class InitState(CommandListState):
     extra = "(init)"
     nextState = RunState
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  , "run:rm -rf /tmp/*"
+                  # , "run:rm -rf /tmp/*"
                   , "run:mkdir -p ##TMPDIR##"
                   , None
                   ]

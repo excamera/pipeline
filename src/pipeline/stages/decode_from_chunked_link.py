@@ -5,7 +5,7 @@ import logging
 import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
-from pipeline.stages.util import default_trace_func
+from pipeline.stages.util import default_trace_func, get_output_from_message
 
 
 class FinalState(OnePassState):
@@ -28,7 +28,8 @@ class ConfirmEmitState(OnePassState):
         super(ConfirmEmitState, self).__init__(prevState)
 
     def post_transition(self):
-        self.emit_event('frames', {'metadata': self.in_events['chunked_link']['metadata'], 'key': self.local['out_key']})
+        self.emit_event('frames', {'metadata': self.in_events['chunked_link']['metadata'], 'key': self.local['out_key']
+                                   , 'nframes': self.local['output_count']})
         return self.nextState(self)  # don't forget this
 
 
@@ -51,7 +52,8 @@ class CheckOutputState(IfElseState):
     alternativeState = FinalState
 
     def testfn(self):
-        return self.messages[-1].startswith('OK:RETVAL(0)')
+        self.local['output_count'] = int(get_output_from_message(self.messages[-1]))
+        return self.local['output_count'] > 0
 
     def __init__(self, prevState):
         super(CheckOutputState, self).__init__(prevState)
@@ -64,7 +66,7 @@ class RunState(CommandListState):
         , ('OK:RETVAL(0)', 'run:./youtube-dl -f "(mp4)" --get-url {URL} 2>/dev/null | head -n1 | xargs -IPLACEHOLDER '
                            './ffmpeg -y -ss {starttime} -i PLACEHOLDER -frames {frames} -f image2 -c:v png '
                            '-start_number 1 ##TMPDIR##/out_0/%08d.png')
-        , ('OK:RETVAL(0)', 'run:test `find ##TMPDIR##/out_0/ -name "*png" | wc -l` -gt 0')
+        , ('OK:RETVAL(0)', 'run:find ##TMPDIR##/out_0/ -name "*png" | wc -l')
                    # result will be used in next state
                    ]
 
@@ -82,7 +84,7 @@ class InitState(CommandListState):
     extra = "(init)"
     nextState = RunState
     commandlist = [("OK:HELLO", "seti:nonblock:0")
-        , "run:rm -rf /tmp/*"
+        # , "run:rm -rf /tmp/*"
         , "run:mkdir -p ##TMPDIR##"
         , None
                    ]

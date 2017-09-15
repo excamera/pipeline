@@ -19,6 +19,8 @@ class EmitState(CommandListState):
     def __init__(self, prevState):
         super(EmitState, self).__init__(prevState)
         self.emit_event('frames', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['out_key']})
+        # self.emit_event('frames', {'metadata': self.in_events['frames']['metadata'], 'keys': [(self.local['out_key'],
+        #                 (1, self.in_events['frames']['nframes'], self.in_events['frames']['nframes']))]})  # TODO: better replace with real output number
 
 
 class RunState(CommandListState):
@@ -45,7 +47,7 @@ class InitState(CommandListState):
     extra = "(init)"
     nextState = RunState
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  , "run:rm -rf /tmp/*"
+                  # , "run:rm -rf /tmp/*"
                   , "run:mkdir -p ##TMPDIR##"
                   , None
                   ]
