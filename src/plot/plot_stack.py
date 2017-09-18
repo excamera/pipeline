@@ -1,10 +1,10 @@
 import sys
 import pdb
 import re
-from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 
+from util import preprocess
 
 cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl')
 
@@ -40,26 +40,9 @@ cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect',
 
 
 def plot_stack(lines, chunk_length=None):
-    assert lines[0].split(',')[1].strip() == 'starting pipeline'
-    assert lines[-1].split(',')[1].strip() == 'pipeline finished'
-
-    start_ts = float(lines[0].split(',')[0])
-    data = OrderedDict()
-    for i in xrange(1, len(lines)-1):  # first, last lines excluded
-        fields = lines[i].split(',', 4)
-        ts = float(fields[0].strip())
-        lineage = fields[1].strip()
-        op = fields[2].strip()
-        msg = fields[3].strip()
-        if lineage == '0' or op != 'send':
-            continue
-        if not data.has_key(lineage):
-            data[lineage] = []
-        if msg.startswith(cmd_of_interest):
-        #if True:
-            data[lineage].append((ts-start_ts, msg[:10]))
-
+    data = preprocess(lines, cmd_of_interest)
     values = data.values()
+    values[1] = values[0]
     j = len(values[0])-1
     while j >= 0:
         ts = [r[j][0] for r in values]
