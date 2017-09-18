@@ -1,0 +1,110 @@
+{
+  "nodes":[
+    {
+      "name": "distribute_link",
+      "stage": "distribute_sceneChange",
+      "config": {
+      }
+    },
+    {
+      "name": "scenechange_from_chunked_link",
+      "stage": "scenechange_from_chunked_link",
+      "config": {
+      }
+    },
+    {
+      "name": "deploy_count",
+      "stage": "deploy_count",
+      "config": {
+      }
+    },
+    {
+      "name": "googleFace",
+      "stage": "googleFace_Mic",
+      "lambda_function": "tempc_ueIAqjxt",
+      "config": {
+      }
+    },
+    {
+      "name": "intermediate",
+      "stage": "intermediate_coupled_ConnectScenes",
+      "lambda_function": "tempc_ueIAqjxt",
+      "deliver_function": "scene_deliver_func",
+      "config": {
+      }
+    },
+    {
+      "name": "decode",
+      "stage": "my_decode",
+      "config": {
+      }
+    },
+    {
+      "name": "rek",
+      "stage": "rek_Mic",
+      "lambda_function": "tempc_ueIAqjxt",
+      "deliver_function": "anypair_deliver_func",
+      "config": {
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_to_dash",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_link",
+      "dst": "distribute_link:video_link"
+    },
+    {
+      "src":"distribute_link:chunked_link_forScene",
+      "dst": "scenechange_from_chunked_link:chunked_link_forScene"
+    },
+    {
+      "src": "input_2:video_link",
+      "dst": "deploy_count:video_link"
+    },
+    {
+      "src": "deploy_count:count",
+      "dst": "intermediate:count",
+      "durable": true
+    },
+    {
+      "src": "scenechange_from_chunked_link:timestamp",
+      "dst": "intermediate:timestamp"
+    },
+    {
+      "src": "input_1:person",
+      "dst": "googleFace:person"
+    },
+    {
+      "src": "googleFace:person",
+      "dst": "rek:person",
+      "durable": true
+    },
+    {
+      "src": "intermediate:my_chunked_link",
+      "dst": "decode:my_chunked_link"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "rek:frames"
+    },
+    {
+      "src": "rek:frames",
+      "dst": "encode:frames"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+
+}
+
+  

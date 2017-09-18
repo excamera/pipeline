@@ -6,7 +6,7 @@ from copy import deepcopy
 import libmu
 from pipeline.config import settings
 import pdb
-
+import heapq
 
 def get_default_event():
     return {
@@ -90,7 +90,7 @@ def anypair_deliver_func(buffer_queues, deliver_queue, **kwargs):
         deliver_queue.put(paired_event)
     if not refreshed and stale:
         for q in buffer_queues.values():
-            q.clear()
+            q.queue.clear()
 
 
 def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
@@ -155,6 +155,87 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
 
     stage_context['next_lineage'] = next_lineage
 
+def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
+    """deliver scene chunks in chronoligical order when 2 scene changes are detected"""
+
+    def helper_reset(many_events, bufferQ, pullQueue):
+        for item in many_events:
+            pullQueue.put(item)
+        for leftover in bufferQ:
+            pullQueue.put(leftover[1])
+        return pullQueue
+
+    assert len(buffer_queues) == 1  # TODO: add validator when creating pipe
+
+    pullQueue = buffer_queues.values()[0]
+
+    bufferQ = []
+
+    while not pullQueue.empty():
+
+        # first sort everything into a heap
+        containsEnd = False
+        sceneChange1 = False
+
+        #take first element and extract key
+        tempEvent = pullQueue.get()
+        for key in tempEvent:
+            thekey = key
+        if str(tempEvent[thekey]['end']) == str(True):
+                containsEnd = True
+        heapq.heappush(bufferQ, (tempEvent[thekey]['seconds'][0],tempEvent))
+
+        #take the rest and push onto heap
+        while not pullQueue.empty():
+            tempEvent = pullQueue.get()
+            if str(tempEvent[thekey]['end']) == str(True):
+                    containsEnd = True
+            heapq.heappush(bufferQ, (tempEvent[thekey]['seconds'][0],tempEvent))
+    
+        #continue saving as outerevent
+        metadataEvent = heapq.heappop(bufferQ)[1]
+        event = {}
+        event.update(metadataEvent)
+
+        many_events = []
+        many_events.append(metadataEvent)
+
+        #now append all events together
+        while ((not sceneChange1) or containsEnd):
+
+            #start taking from heap and make sure that the seconds are adjacent
+            if len(bufferQ) != 0:
+                event0 = heapq.heappop(bufferQ)[1]
+
+            elif containsEnd:
+                break 
+            else: #if there is nothing saved in the heap, we are too early. return
+                pullQueue = helper_reset(many_events, bufferQ, pullQueue)
+                return 
+            if event0[thekey]['seconds'][0] == many_events[-1][thekey]['seconds'][1]:
+                many_events.append(event0)
+                #if there is a scene change 
+                if not sceneChange1 and len(event0[thekey]['output'])>3:
+                    sceneChange1 = True
+                    #push the last scene change so that it is the first for
+                    #the next chunk
+                    heapq.heappush(bufferQ, (event0[thekey]['seconds'][0],event0))
+
+            else: #we are not ready yet b/c sequential is not ready
+                  #must return
+                pullQueue = helper_reset(many_events, bufferQ, pullQueue)
+                pullQueue.put(event0)
+                return 
+
+        #push everything back onto pullQueue that wasnt touched
+        for leftover in bufferQ:
+            pullQueue.put(leftover[1])
+
+        #save allevents hidden in the metadataevent
+        event[thekey]['combined_events'] = many_events
+        deliver_queue.put(event)
+
+        return
 
 def get_output_from_message(msg):
     o_marker = '):OUTPUT('

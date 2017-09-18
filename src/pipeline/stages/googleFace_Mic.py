@@ -32,7 +32,7 @@ class EmitState(OnePassState):
     def post_transition(self):
         metadata = self.in_events['person']['metadata']
         self.emit_event('person', {'metadata': metadata,
-                                       'key': str(self.in_events['person']['key']+ '.jpg')})
+                                       'key': str(self.local['personId'])})
         return self.nextState(self)  # don't forget this
 
 
@@ -46,13 +46,14 @@ class GetOutputState(OnePassState):
         super(GetOutputState, self).__init__(prevState)
 
     def post_transition(self):
+        self.local['personId'] = get_output_from_message(self.messages[-1])
         return self.nextState(self)  # don't forget this
 
 
 class RunState(CommandListState):
     extra = "(run)"
     nextState = GetOutputState
-    commandlist = [(None, 'run: python googleFace_init_s3.py "{person}" 5 ##TMPDIR##')
+    commandlist = [(None, 'run: python googleFace_Mic_init_s3.py "{person}" 5 ##TMPDIR##')
                    # output will be used in latter states
                    ]
 

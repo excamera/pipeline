@@ -44,7 +44,7 @@ class TryEmitState(CommandListState):
 
         # pdb.set_trace()
         self.local['key_list'] = [settings['storage_base'] + self.in_events['frames']['metadata'][
-            'pipe_id'] + '/rek/' + str(uuid.uuid4()) for f in flist]
+            'pipe_id'] + '/rek_scenekeep/' + str(uuid.uuid4()) for f in flist]
         pairs = [flist[i] + ' ' + self.local['key_list'][i] for i in xrange(len(self.local['key_list']))]
         self.commands = [s.format(**{'pairs': ' '.join(pairs)}) if s is not None else None for s in self.commands]
 
@@ -82,7 +82,7 @@ class RunState(CommandListState):
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
                   , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
-                  , ('OK:RETVAL(0)', 'run: python lambdaRek_opt_mt.py ' +\
+                  , ('OK:RETVAL(0)', 'run: python lambdaRek_scenekeep_opt_mt.py ' +\
                           '"{person}" ##TMPDIR##/in_0/*.png ##TMPDIR##/out_0/ 300 70 5 0.1') #for _opt_mt
                     #check if only txt file is there 
                   , ('OK:RETVAL(0)', 'run:find ##TMPDIR##/out_0/ -type f | sort')

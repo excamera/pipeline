@@ -9,7 +9,7 @@
     {
       "name": "googleFace",
       "stage": "googleFace",
-      "lambda_function": "tempc_Y97xel9I",
+      "lambda_function": "tempc_ueIAqjxt",
       "config": {
       }
     },
@@ -22,7 +22,7 @@
     {
       "name": "rek",
       "stage": "rek",
-      "lambda_function": "tempc_Y97xel9I",
+      "lambda_function": "tempc_ueIAqjxt",
       "deliver_function": "anypair_deliver_func",
       "config": {
       }
