@@ -28,7 +28,7 @@ class DashifyState(CommandListState):
     nextState = EmitState
     commandlist = [ (None, 'run:cd ##TMPDIR##/temp_0 && $OLDPWD/MP4Box -dash {duration_in_ms} -rap -segment-name '
                                      'seg_{segment}_ ##TMPDIR##/temp_0/{segment}.mp4#video:id=video ##TMPDIR##/temp_0/{segment}.mp4#audio:id=audio && cd -')
-                  , ('OK:RETVAL(0)', 'run:python amend_m4s.py ##TMPDIR##/temp_0/seg_{segment}_1.m4s {segment}')
+                  , ('OK:RETVAL(0)', 'run:python amend_m4s.py ##TMPDIR##/temp_0/seg_{segment}_1.m4s {segment} {relative_duration}')
                   , ('OK:RETVAL(0)', 'run:mv ##TMPDIR##/temp_0/00000001_dash.mpd ##TMPDIR##/temp_0/00000001_dash_init.mp4 ##TMPDIR##/out_0/; '
                                      'mv ##TMPDIR##/temp_0/*m4s ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
@@ -37,8 +37,12 @@ class DashifyState(CommandListState):
 
     def __init__(self, prevState):
         super(DashifyState, self).__init__(prevState)
+        segment = '%08d' % int(self.in_events['frames']['metadata']['lineage'])
+        chunk_duration = self.in_events['frames']['metadata'].get('chunk_duration')
+        relative_duration = self.local['duration'] / chunk_duration if chunk_duration else ''
         params = {'duration_in_ms': self.local['duration'] * 1000,  # s to ms
-                  'segment': '%08d' % int(self.in_events['frames']['metadata']['lineage']),
+                  'segment': segment,
+                  'relative_duration': relative_duration,
                   'out_key': self.local['out_key']}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
