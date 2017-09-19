@@ -4,7 +4,8 @@
       "name": "parlink",
       "stage": "parallelize_link",
       "config": {
-        "framesperchunk": "{fps}"
+        "framesperchunk": "{fps}",
+        "filter": "[fps>=30]"
       }
     },
     {
@@ -50,5 +51,4 @@
       "dst": "output_0:chunks"
     }
   ]
-
 }
