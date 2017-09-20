@@ -40,7 +40,7 @@ class EmitState(OnePassState):
         while i * (float(framesperchunk) - overlap) / metadata['fps'] < self.local['duration']:
             # actual parallelizing here
             newmeta = metadata.copy()
-            starttime = i * (framesperchunk - overlap) / metadata['fps']
+            starttime = i * (float(framesperchunk) - overlap) / metadata['fps']
             newmeta['lineage'] = str(i + 1)
             newmeta['chunk_duration'] = float(framesperchunk) / metadata['fps']
             self.emit_event('chunked_link', {'metadata': newmeta,

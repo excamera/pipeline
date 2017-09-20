@@ -20,7 +20,8 @@ class EmitState(CommandListState):
 
     def __init__(self, prevState):
         super(EmitState, self).__init__(prevState)
-        self.emit_event('chunks', {'metadata': self.in_events['frame_list']['metadata'], 'key': self.local['out_key']})
+        self.emit_event('chunks', {'metadata': self.in_events['frame_list']['metadata'], 'key': self.local['out_key'],
+                                   'duration': self.local['duration']})
 
 
 class DashifyState(CommandListState):
