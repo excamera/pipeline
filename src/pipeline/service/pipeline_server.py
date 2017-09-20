@@ -58,20 +58,23 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             out_key = None
             logging.debug("length of output queue: %s", result_queue.qsize())
 
+            duration = 0.0
             while not result_queue.empty():
-                chunk = result_queue.get(block=False)['chunks']  # TODO: should distinguish chunks vs. m4schunks
+                chunk = result_queue.get(block=False)['chunks']  # TODO: should named chunks or m4schunks
                 num_m4s += 1
+                duration += chunk['duration']
                 if int(chunk['metadata']['lineage']) == 1:
                     out_key = chunk['key']
 
-            logging.debug("number of m4s chunks: %s", num_m4s)
+            logging.info("number of m4s chunks: %d", num_m4s)
+            logging.info("total duration: %f", duration)
             if out_key is not None:
                 os.system('aws s3 cp ' + out_key + '00000001_dash.mpd ' + pipe_dir + '/')
                 logging.info('mpd downloaded')
                 with open(pipe_dir + '/00000001_dash.mpd', 'r') as fin:
                     init_mpd = fin.read()
 
-                final_mpd = amend_mpd(init_mpd, float(num_m4s), out_key, num_m4s)
+                final_mpd = amend_mpd(init_mpd, duration, out_key, num_m4s)
 
                 logging.info('mpd amended')
                 with open(pipe_dir + '/output.xml', 'wb') as fout:

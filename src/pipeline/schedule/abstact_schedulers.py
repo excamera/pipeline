@@ -34,9 +34,11 @@ class SchedulerBase(object):
             error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
             if len(error_tasks) > 0:
                 logging.error(str(len(error_tasks))+" tasks failed: ")
+                errmsgs = []
                 for et in error_tasks:
                     logging.error(et.current_state.str_extra())
-                raise Exception(str(len(error_tasks))+" tasks failed")
+                    errmsgs.append(et.current_state.str_extra())
+                raise Exception(str(len(error_tasks))+" tasks failed\n"+"\n".join(errmsgs))
             tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
 
             if buffer_empty and deliver_empty and len(tasks) == 0:
