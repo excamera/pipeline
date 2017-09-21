@@ -26,13 +26,12 @@ class ConfirmEmitState(OnePassState):
 
     def post_transition(self):
         scale = float(self.config.get('scale', 1))
-        pos = 0.0
-        count = 0
-        while int(pos) < len(self.local['key_list']):
-            self.emit_event('frame', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['key_list'][int(pos)],
-                                      'number': count+1, 'EOF': int(pos + 1/scale) >= len(self.local['key_list']), 'type': 'png'})
-            pos = pos + 1/scale
-            count += 1
+        k_list = self.local['key_list']
+        outlist = [k_list[int(i / scale)] for i in range(0, int(len(k_list) * scale) + 1) if
+                   int(i / scale) < len(k_list)]
+        for i in xrange(len(outlist)):
+            self.emit_event('frame', {'metadata': self.in_events['frames']['metadata'], 'key': outlist[i],
+                                      'number': i+1, 'EOF': i == len(outlist) - 1, 'type': 'png'})
         return self.nextState(self)  # don't forget this
 
 
