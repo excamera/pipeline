@@ -106,7 +106,7 @@ class RunState(CommandListState):
     nextState = GetOutputState
     #save all the times
     #TODO: this youtube-dl can probs me moved earlier to do only once and passed in
-    commandlist = [ (None, 'run: ./youtube-dl --get-url {link}  2>/dev/null |\
+    commandlist = [ (None, 'run: ./youtube-dl --get-url {link} -f "(mp4)"  2>/dev/null |\
                     head -n1 | xargs -IPLACEHOLDER ./ffmpeg \
                  -i \'PLACEHOLDER\' \
                   -vf "trim={starttime}:{totime}, select=gt(scene\,0.2),showinfo" -'\

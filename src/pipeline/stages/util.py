@@ -7,6 +7,7 @@ import libmu
 from pipeline.config import settings
 import pdb
 import heapq
+import math
 
 def get_default_event():
     return {
@@ -100,10 +101,20 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
         merged = {}
         sample = deepcopy(events[0])
         sample['frame_list']['metadata']['lineage'] = lineage
-        klist = [e['frame_list']['key'] for e in events]
-        merged['frame_list'] = {'metadata': deepcopy(sample['frame_list']['metadata']), 'type': deepcopy(sample['frame_list']['type']),
+
+        klist = []
+        for e in events:
+            if e['frame_list']['key'] != None:
+                klist.append(e['frame_list']['key'])
+        merged['frame_list'] = {'metadata': deepcopy(sample['frame_list']['metadata']),\
+                'type': deepcopy(sample['frame_list']['type']),
                                 'key_list': klist}
-        return merged
+ 
+        #if the leftover only consisted of empty frames
+        if klist == []:
+            return {}
+        else:
+            return merged
 
     assert len(buffer_queues) == 1  # TODO: add validator when creating pipe
     stale = kwargs['stale']
@@ -113,6 +124,8 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
 
     metadata = buffer_queues.values()[0].queue[0].values()[0]['metadata']
     expecting = stage_context.get('expecting', 1)  # expecting lineage
+    #print "expecting"
+    #print expecting
     next_lineage = stage_context.get('next_lineage', 1)
     config = preprocess_config(stage_conf, {'fps': metadata['fps']})
     framesperchunk = config.get('framesperchunk', metadata['fps'])
@@ -124,32 +137,66 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
         'number'])
     start = 0
     while True:
+
+        i = start
+        fcount = start
+        disregard = False
+
         if start + framesperchunk > len(ordered_events):
             break
-        for i in xrange(start, start + framesperchunk):
-            # if i == start + framesperchunk - 1:
-            #     pdb.set_trace()
-            if int(ordered_events[i].values()[0]['metadata']['lineage']) != expecting:
+
+        while i < (start + framesperchunk):
+            #pdb.set_trace()
+
+            #there is not enough extra events to cover for the empty ones
+            if fcount == len(ordered_events):
+                disregard = True
+                break 
+
+            if int(ordered_events[fcount].values()[0]['metadata']['lineage']) != expecting:
+                disregard = True
                 break
-            if ordered_events[i].values()[0]['EOF']:
+
+            if 'Empty' in ordered_events[fcount].values()[0]:
+                expecting+=1
+                #do not increment i since this is empty
+                fcount +=1
+                continue
+
+            if ordered_events[fcount].values()[0]['EOF']:
                 expecting += 1
-        else:  # enough frames, merge and go!
-            merged = merge_events(ordered_events[start:start + framesperchunk], str(next_lineage))
+
+            fcount+=1
+            i+=1
+
+
+        if not disregard:  # enough frames, merge and go!
+            merged = merge_events(ordered_events[start:fcount], str(next_lineage))
             deliver_queue.put(merged)
             logging.info("delivered: %s", merged)
-            start += framesperchunk
+            start += (framesperchunk) #+ (fcount - i))
+            print "start"
+            print start
             next_lineage += 1
             refreshed = True
             stage_context['expecting'] = expecting  # only when delivered should we update stage's expecting lineage
             continue
         break
+    
+    #print kwargs
 
     if refreshed or not stale:
         for e in ordered_events[start:]:
             buffer_queues.values()[0].put(e)  # put them back
+
     else:
         # that're the only frames left, deliver
         merged = merge_events(ordered_events[start:], str(next_lineage))
+
+        #If leftover had only empty frames
+        if merged == {}:
+            return
+
         deliver_queue.put(merged)
         logging.info("delivered leftover: %s", merged)
 
@@ -158,12 +205,43 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
 def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
     """deliver scene chunks in chronoligical order when 2 scene changes are detected"""
 
+    #puts everything back on the queue
     def helper_reset(many_events, bufferQ, pullQueue):
         for item in many_events:
             pullQueue.put(item)
         for leftover in bufferQ:
             pullQueue.put(leftover[1])
         return pullQueue
+
+    #extracts the last used lineage
+    #and returns amount of scene changes
+    def extract_lineage(event, thekey):
+        #if this is the first event, 
+        # add a starting lineage to event
+        if str(event[thekey]['seconds'][0]) == str(0):
+            event[thekey]['lineage'] = 1
+            lineage = 1
+            scenechanges = len(event[thekey]['output'])-3 
+            t1 = 0
+            return event,lineage,t1,scenechanges
+        else:
+            t1 = float(event[thekey]['output'][-1])
+            scenechanges = 0
+            return event,event[thekey]['lineage'],t1,scenechanges
+    
+
+    #add a lineage for intermediate to later use
+    def add_lineage(event, thekey, lineage,t1,og_scenechanges):
+        FIRST_SCENE_INDEX = 3
+        #calculating how many chunks we predict will be emitted
+        t2 = float(event[thekey]['output'][FIRST_SCENE_INDEX])
+        scenechanges = len(event[thekey]['output'])-3
+
+        difference = math.ceil(t2 - t1)
+
+        event[thekey]['lineage'] = int(lineage+difference+(scenechanges-1)+ og_scenechanges)
+        return event
+
 
     assert len(buffer_queues) == 1  # TODO: add validator when creating pipe
 
@@ -197,7 +275,10 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
         event = {}
         event.update(metadataEvent)
 
+        print metadataEvent
+
         many_events = []
+        metadataEvent,lineage,t1,og_scenechanges = extract_lineage(metadataEvent,thekey)
         many_events.append(metadataEvent)
 
         #now append all events together
@@ -213,14 +294,14 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
                 pullQueue = helper_reset(many_events, bufferQ, pullQueue)
                 return 
             if event0[thekey]['seconds'][0] == many_events[-1][thekey]['seconds'][1]:
-                many_events.append(event0)
                 #if there is a scene change 
                 if not sceneChange1 and len(event0[thekey]['output'])>3:
                     sceneChange1 = True
                     #push the last scene change so that it is the first for
                     #the next chunk
+                    event0 = add_lineage(event0,thekey, lineage,t1,og_scenechanges)
                     heapq.heappush(bufferQ, (event0[thekey]['seconds'][0],event0))
-
+                many_events.append(event0)
             else: #we are not ready yet b/c sequential is not ready
                   #must return
                 pullQueue = helper_reset(many_events, bufferQ, pullQueue)

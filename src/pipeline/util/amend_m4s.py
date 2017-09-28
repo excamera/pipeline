@@ -4,7 +4,7 @@ import sys
 import mmap
 import struct
 
-def amend_m4s(filename, seqno, time_offset=None):
+def amend_m4s(filename, seqno, relative_duration=None):
     f = open(filename, 'r+b')
     mm = mmap.mmap(f.fileno(), 0)
     # first remove lmsg (if any)
@@ -19,11 +19,13 @@ def amend_m4s(filename, seqno, time_offset=None):
     sidx_pos = styp_size
     sidx_size = get_value(mm[sidx_pos:sidx_pos+4])
     duration = get_value(mm[sidx_pos+36:sidx_pos+40])
-    if time_offset is None:
+    if relative_duration is None:
         time_offset = duration*(seqno-1)
+    else:
+        time_offset = int(duration/float(relative_duration)) * (seqno - 1)
     # update earlist prez time
     mm[sidx_pos+20:sidx_pos+24] = struct.pack('>I', time_offset)
-    
+
     moof_pos = sidx_pos + sidx_size
     mfhd_pos = moof_pos + 8
     mfhd_size = get_value(mm[mfhd_pos:mfhd_pos+4])
@@ -51,5 +53,5 @@ if __name__=='__main__':
     elif len(sys.argv) == 4:
         amend_m4s(sys.argv[1], int(sys.argv[2]), float(sys.argv[3]))
     else:
-        sys.stderr.write(str('usage: '+sys.argv[0]+' filename FragmentSequenceNumber [TimeOffset]\n'))
+        sys.stderr.write(str('usage: '+sys.argv[0]+' filename FragmentSequenceNumber [RelativeDuration]\n'))
         sys.exit(1)

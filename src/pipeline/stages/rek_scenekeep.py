@@ -24,11 +24,17 @@ class ConfirmEmitState(OnePassState):
 
     def post_transition(self):
             #if Rek failed to find someone
+            if self.local['output'] == []:
+                self.emit_event('frame', {'metadata':self.in_events['frames']['metadata'],
+                    'key': None, 'number': 1, 'type':'png',
+                    'EOF':True,'Empty':True})
+                return self.nextState(self)  # don't forget this
+
             for i in xrange(len(self.local['key_list'])):
                 self.emit_event('frame', {'metadata': self.in_events['frames']['metadata'], 
                     'key': self.local['key_list'][i],'number':i+1,
-                    'EOF': i == len(self.local['key_list'])/2-1, 'type': 'png'})
-
+                    'EOF': i == len(self.local['key_list'])-1, 'type': 'png'})
+        
             return self.nextState(self)  # don't forget this
 
 class TryEmitState(CommandListState):
@@ -71,10 +77,7 @@ class GetOutputState(OnePassState):
         self.local['output'] = new_flist
         #print self.local['output']
 
-        if self.local['output'] == []:
-            return FinalState(self) #no point in going on  
-        else:
-            return self.nextState(self)  # don't forget this
+        return self.nextState(self)  # don't forget this
 
 class RunState(CommandListState):
     extra = "(run)"

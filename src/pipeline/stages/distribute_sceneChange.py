@@ -50,7 +50,7 @@ class EmitState(OnePassState):
                                        'starttime': starttime,
                                        'frames': framesperchunk,
                                        'fps': metadata['fps'],
-                                       'lineage':metacopy['lineage'],
+                                       'lineage':starttime,
                                        'end': endChunk})
             i += 1
         return self.nextState(self)  # don't forget this
