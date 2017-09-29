@@ -88,6 +88,7 @@ def anypair_deliver_func(buffer_queues, deliver_queue, **kwargs):
         paired_event = {}
         paired_event.update(event0)
         paired_event.update(event1)
+        print paired_event
         deliver_queue.put(paired_event)
     if not refreshed and stale:
         for q in buffer_queues.values():
@@ -112,6 +113,7 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
  
         #if the leftover only consisted of empty frames
         if klist == []:
+            merged = {}
             return {}
         else:
             return merged
@@ -174,9 +176,7 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
             merged = merge_events(ordered_events[start:fcount], str(next_lineage))
             deliver_queue.put(merged)
             logging.info("delivered: %s", merged)
-            start += (framesperchunk) #+ (fcount - i))
-            print "start"
-            print start
+            start += (framesperchunk + (fcount - i))
             next_lineage += 1
             refreshed = True
             stage_context['expecting'] = expecting  # only when delivered should we update stage's expecting lineage
@@ -247,6 +247,10 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
 
     pullQueue = buffer_queues.values()[0]
 
+    stage_context = kwargs['stage_context']
+    expecting = stage_context.get('expecting_sec', 0)  # expecting lineage
+    next_lineage = stage_context.get('next_lineage', 1)
+
     bufferQ = []
 
     while not pullQueue.empty():
@@ -259,15 +263,15 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
         tempEvent = pullQueue.get()
         for key in tempEvent:
             thekey = key
-        if str(tempEvent[thekey]['end']) == str(True):
-                containsEnd = True
+        #if str(tempEvent[thekey]['end']) == str(True):
+        #        containsEnd = True
         heapq.heappush(bufferQ, (tempEvent[thekey]['seconds'][0],tempEvent))
 
         #take the rest and push onto heap
         while not pullQueue.empty():
             tempEvent = pullQueue.get()
-            if str(tempEvent[thekey]['end']) == str(True):
-                    containsEnd = True
+            #if str(tempEvent[thekey]['end']) == str(True):
+            #        containsEnd = True
             heapq.heappush(bufferQ, (tempEvent[thekey]['seconds'][0],tempEvent))
     
         #continue saving as outerevent
@@ -275,11 +279,14 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
         event = {}
         event.update(metadataEvent)
 
-        print metadataEvent
-
         many_events = []
         metadataEvent,lineage,t1,og_scenechanges = extract_lineage(metadataEvent,thekey)
         many_events.append(metadataEvent)
+
+        if metadataEvent[thekey]['seconds'][0] != expecting:
+                pullQueue = helper_reset(many_events, bufferQ, pullQueue)
+                return
+
 
         #now append all events together
         while ((not sceneChange1) or containsEnd):
@@ -287,7 +294,8 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
             #start taking from heap and make sure that the seconds are adjacent
             if len(bufferQ) != 0:
                 event0 = heapq.heappop(bufferQ)[1]
-
+                if str(event0[thekey]['end']) == str(True):
+                    containsEnd = True
             elif containsEnd:
                 break 
             else: #if there is nothing saved in the heap, we are too early. return
@@ -300,6 +308,9 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
                     #push the last scene change so that it is the first for
                     #the next chunk
                     event0 = add_lineage(event0,thekey, lineage,t1,og_scenechanges)
+                    expecting = event0[thekey]['seconds'][0]
+
+                    stage_context['expecting_sec'] = expecting                
                     heapq.heappush(bufferQ, (event0[thekey]['seconds'][0],event0))
                 many_events.append(event0)
             else: #we are not ready yet b/c sequential is not ready
@@ -314,6 +325,7 @@ def scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
 
         #save allevents hidden in the metadataevent
         event[thekey]['combined_events'] = many_events
+        print event
         deliver_queue.put(event)
 
         return

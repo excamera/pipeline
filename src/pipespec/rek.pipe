@@ -1,8 +1,14 @@
 {
   "nodes":[
     {
-      "name": "parlink",
-      "stage": "parallelize_link",
+      "name": "distribute_link",
+      "stage": "distribute_sceneChange",
+      "config": {
+      }
+    },
+    {
+      "name": "scenechange_from_chunked_link",
+      "stage": "scenechange_from_chunked_link",
       "config": {
       }
     },
@@ -14,8 +20,16 @@
       }
     },
     {
+      "name": "intermediate",
+      "stage": "intermediate_coupled_ConnectScenes",
+      "lambda_function": "tempc_ueIAqjxt",
+      "deliver_function": "scene_deliver_func",
+      "config": {
+      }
+    },
+    {
       "name": "decode",
-      "stage": "decode_from_chunked_link",
+      "stage": "my_decode",
       "config": {
       }
     },
@@ -29,7 +43,8 @@
     },
     {
       "name": "encode",
-      "stage": "encode_to_dash",
+      "stage": "encode_frame_list",
+      "deliver_function": "serialized_frame_deliver_func",
       "config": {
       }
     }
@@ -39,7 +54,15 @@
   [
     {
       "src": "input_0:video_link",
-      "dst": "parlink:video_link"
+      "dst": "distribute_link:video_link"
+    },
+    {
+      "src":"distribute_link:chunked_link_forScene",
+      "dst": "scenechange_from_chunked_link:chunked_link_forScene"
+    },
+    {
+      "src": "scenechange_from_chunked_link:timestamp",
+      "dst": "intermediate:timestamp"
     },
     {
       "src": "input_1:person",
@@ -51,16 +74,16 @@
       "durable": true
     },
     {
-      "src": "parlink:chunked_link",
-      "dst": "decode:chunked_link"
+      "src": "intermediate:my_chunked_link",
+      "dst": "decode:my_chunked_link"
     },
     {
       "src": "decode:frames",
       "dst": "rek:frames"
     },
     {
-      "src": "rek:frames",
-      "dst": "encode:frames"
+      "src": "rek:frame",
+      "dst": "encode:frame_list"
     },
     {
       "src": "encode:chunks",

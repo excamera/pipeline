@@ -15,14 +15,14 @@
     {
       "name": "googleFace",
       "stage": "googleFace",
-      "lambda_function": "tempc_ueIAqjxt",
+      "lambda_function": "tempc_mhV2zoWS",
       "config": {
       }
     },
     {
       "name": "intermediate",
       "stage": "intermediate_coupled_ConnectScenes",
-      "lambda_function": "tempc_ueIAqjxt",
+      "lambda_function": "tempc_mhV2zoWS",
       "deliver_function": "scene_deliver_func",
       "config": {
       }
@@ -36,7 +36,7 @@
     {
       "name": "rek",
       "stage": "rek_scenekeep",
-      "lambda_function": "tempc_ueIAqjxt",
+      "lambda_function": "tempc_mhV2zoWS",
       "deliver_function": "anypair_deliver_func",
       "config": {
       }

@@ -7,6 +7,7 @@ from pipeline.config import settings
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
 from pipeline.stages.util import default_deliver_func
+from pipeline.util.durable_queue import DurableQueue
 from . import print_task_states
 import pdb
 
@@ -22,8 +23,7 @@ class SchedulerBase(object):
             deliver_empty = True
             for key, stage in pipeline.stages.iteritems():
                 stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
-                if any([not q.empty() for q in stage.buffer_queues.values()]):
-                    buffer_empty = False
+                if any([not q.empty() and not isinstance(q, DurableQueue) for q in stage.buffer_queues.values()]):
                     stage.deliver_func(stage.buffer_queues, stage.deliver_queue,
                                        stale=len(tasks) == 0 and stage.deliver_queue.empty(),
                                        stage_conf=stage.config, stage_context=stage.context)

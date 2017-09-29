@@ -45,12 +45,16 @@ class EmitState(OnePassState):
             #if the second is a 0, append a 0
             if output['timestamp']['seconds'][0] == 0:
                 self.local['times'].append(0)
+                lineage = output['timestamp']['lineage']
             #if the chunk is end, eventually add the duration
             if str(output['timestamp']['end']) == str(True):
                 endChunk = True
             if len(output['timestamp']['output']) > 3:
                 if i == 0: #if this is the first event, only append the last scene change
                     self.local['times'].append(float(output['timestamp']['output'][-1])) 
+                    lineage = output['timestamp']['lineage']
+                    print "Lineage is:"
+                    print lineage
                 else:
                     #print "-----We have encountered a larger time\n"
                     #print output
@@ -73,7 +77,7 @@ class EmitState(OnePassState):
         ############
 
         metadata = self.in_events['timestamp']['metadata']
-        fps = self.local['fps']
+        fps = int(self.local['fps'])
 
         #remove redundant times
         self.local['times'] = list(set(self.local['times']))
@@ -81,6 +85,7 @@ class EmitState(OnePassState):
         #sort the times since who knows what order they are in
         self.local['times'].sort()
 
+        #TODO: Eventually remove the printing
         print self.local['times']
 
 
@@ -107,20 +112,23 @@ class EmitState(OnePassState):
                 #TODO: Make lineage the first second in the chunks?
                 #Figure out!
                 localChunkStarttime = starttime + chunk*(float(averageFramesNumber)/float(fps))
-                metacopy['lineage'] = math.floor(localChunkStarttime) +1
+                metacopy['lineage'] = lineage
 
                 self.emit_event('my_chunked_link', {'metadata': metacopy,
                                        'key': self.in_events['timestamp']['key'],
                                        'starttime':localChunkStarttime,
                                        'frames': averageFramesNumber,
-                                       'mynumber': math.floor(localChunkStarttime)+1,
+                                       'mynumber':lineage,
                                        'endChunk':endChunk}) #TODO:used to be frames.
 
-                print "\nmynumber: " + str(math.floor(localChunkStarttime) +1)
+                lineage+=1
+
+                """ 
+                print "\nlineage: " + str(lineage-1)
                 print "\nendChunk: " + str(endChunk)
-                print "\nstarttime: " + str((starttime + chunk*(float(averageFramesNumber)/float(fps))))
+                print "\nstarttime: " + str(localChunkStarttime)
                 print "\naverage Frames: " + str(averageFramesNumber)
-            
+                """
         return self.nextState(self)  # don't forget this
 
 
