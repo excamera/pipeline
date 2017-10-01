@@ -50,7 +50,7 @@ class Pipeline(object):
             self.pipe_id, self.stages.keys(), self.inputs.keys(), self.outputs.keys())
 
     def add_stage(self, stage):
-        if self.stages.has_key(stage.key):
+        if stage.key in self.stages:
             raise Exception('existing stage key')
         self.stages[stage.key] = stage
 
@@ -95,17 +95,17 @@ def create_from_spec(pipe_spec):
             raise Exception('stream format error: %s', stream)
 
         if src_node.startswith('input'):
-            if not pipe.stages[dst_node].buffer_queues.has_key(dst_key):
+            if dst_key not in pipe.stages[dst_node].buffer_queues:
                 pipe.stages[dst_node].buffer_queues[dst_key] = DurableQueue() if durable is True else Queue.Queue()
             pipe.inputs[src_node] = (dst_key, pipe.stages[dst_node].buffer_queues[dst_key])  # each input src should only have one key
         elif dst_node.startswith('output'):
-            if not pipe.outputs.has_key(dst_node):
+            if dst_node not in pipe.outputs:
                 pipe.outputs[dst_node] = (dst_key, Queue.Queue())
             pipe.stages[src_node].downstream_map[src_key] = pipe.outputs[dst_node]
         else:
-            if pipe.stages[src_node].downstream_map.has_key(src_key):
+            if src_key in pipe.stages[src_node].downstream_map:
                 raise Exception('existing src key: %s', stream)
-            if not pipe.stages[dst_node].buffer_queues.has_key(dst_key):
+            if dst_key not in pipe.stages[dst_node].buffer_queues:
                 pipe.stages[dst_node].buffer_queues[dst_key] = DurableQueue() if durable is True else Queue.Queue()
             pipe.stages[src_node].downstream_map[src_key] = (dst_key, pipe.stages[dst_node].buffer_queues[dst_key])
 
