@@ -5,6 +5,7 @@ import logging
 import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
+from pipeline.stages import InitStateTemplate
 from pipeline.stages.util import default_trace_func, get_output_from_message
 
 
@@ -73,6 +74,8 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
+        self.local['out_key'] = settings['storage_base'] + self.in_events['chunked_link']['metadata'][
+            'pipe_id'] + '/decode/' + libmu.util.rand_str(16) + '/'
 
         params = {'starttime': self.in_events['chunked_link']['starttime'],
                   'frames': self.in_events['chunked_link']['frames'],
@@ -83,18 +86,5 @@ class RunState(CommandListState):
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
 
 
-class InitState(CommandListState):
-    extra = "(init)"
+class InitState(InitStateTemplate):
     nextState = RunState
-    commandlist = [("OK:HELLO", "seti:nonblock:0")
-                   # , "run:rm -rf /tmp/*"
-        , "run:mkdir -p ##TMPDIR##"
-        , None
-                   ]
-
-    def __init__(self, prevState, in_events, emit_event, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config,
-                                        trace_func=default_trace_func)
-        self.local['out_key'] = settings['storage_base'] + in_events['chunked_link']['metadata'][
-            'pipe_id'] + '/decode/' + libmu.util.rand_str(16) + '/'
-        logging.debug('in_events: ' + str(in_events))

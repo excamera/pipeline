@@ -41,6 +41,7 @@ class Pipeline(object):
         self.stages = {}
         self.inputs = {}
         self.outputs = {}
+        self.pipewide = {}
 
         self.scrub_bar_time = 0.0
         self.tasks = []

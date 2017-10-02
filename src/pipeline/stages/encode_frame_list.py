@@ -4,6 +4,7 @@ import pdb
 
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
 from pipeline.config import settings
+from pipeline.stages import InitStateTemplate
 from pipeline.stages.util import default_trace_func, get_output_from_message
 from pipeline.util.media_probe import get_duration_from_output_lines
 
@@ -71,6 +72,8 @@ class EncodeState(CommandListState):
 
     def __init__(self, prevState):
         super(EncodeState, self).__init__(prevState)
+        self.local['out_key'] = settings['storage_base'] + self.in_events['frame_list']['metadata']['pipe_id'] + '/encode_frame_list/'
+
         pair_list = []
         for i in xrange(len(self.in_events['frame_list']['key_list'])):
             pair_list.append(self.in_events['frame_list']['key_list'][i])
@@ -82,16 +85,5 @@ class EncodeState(CommandListState):
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
 
-class InitState(CommandListState):
-    extra = "(init)"
+class InitState(InitStateTemplate):
     nextState = EncodeState
-    commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  # , "run:rm -rf /tmp/*"
-                  , "run:mkdir -p ##TMPDIR##"
-                  , None
-                  ]
-
-    def __init__(self, prevState, in_events, emit, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit, config=config, trace_func=default_trace_func)
-        self.local['out_key'] = settings['storage_base']+in_events['frame_list']['metadata']['pipe_id']+'/encode_frame_list/'
-        logging.debug('in_events: '+str(in_events))

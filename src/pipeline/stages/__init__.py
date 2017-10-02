@@ -1,3 +1,5 @@
+import logging
+
 from libmu import CommandListState, OnePassState
 from pipeline.stages.util import default_trace_func, get_output_from_message
 
@@ -35,8 +37,9 @@ class InitStateTemplate(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, emit_event, config):
-        super(InitStateTemplate, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=default_trace_func)
+    def __init__(self, prevState, **kwargs):
+        super(InitStateTemplate, self).__init__(prevState, trace_func=kwargs.get('trace_func', default_trace_func), **kwargs)
+        logging.debug('in_events: %s', kwargs['in_events'])
 
 
 class GetOutputStateTemplate(OnePassState):
