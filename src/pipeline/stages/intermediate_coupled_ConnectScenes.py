@@ -7,7 +7,7 @@ import math
 
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
-from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config
+from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config, staged_trace_func
 from copy import deepcopy
 
 class FinalState(OnePassState):
@@ -91,17 +91,20 @@ class EmitState(OnePassState):
 
 
         #emit scene change chunks
+
         for startime in range(0,len(self.local['times'])-1):
-            metacopy = deepcopy(metadata)
             starttime = self.local['times'][startime]
             frames = math.ceil((self.local['times'][startime+1]-self.local['times'][startime])*fps)
-
-
+            
+        
             averageFramesNumber = \
                     int((float(float(frames)/float(fps))/\
                     float(math.ceil(float(frames)/float(fps))))*float(fps))
 
             for chunk in range(0,int(math.ceil(frames/fps))):
+
+                metacopy = deepcopy(metadata)
+                metacopy['lineage'] = lineage
                 endChunk = False
 
                 #for the last chunk
@@ -111,15 +114,17 @@ class EmitState(OnePassState):
 
                 #TODO: Make lineage the first second in the chunks?
                 #Figure out!
+                print "----"
+                print metacopy
+                print "---"
                 localChunkStarttime = starttime + chunk*(float(averageFramesNumber)/float(fps))
-                metacopy['lineage'] = lineage
-
                 self.emit_event('my_chunked_link', {'metadata': metacopy,
                                        'key': self.in_events['timestamp']['key'],
                                        'starttime':localChunkStarttime,
                                        'frames': averageFramesNumber,
                                        'mynumber':lineage,
-                                       'endChunk':endChunk}) #TODO:used to be frames.
+                                       'endChunk':endChunk,
+                                       'me':self.in_events['timestamp']['identity']}) #TODO:used to be frames.
 
                 lineage+=1
 
@@ -156,5 +161,5 @@ class InitState(CommandListState):
                   ]
 
     def __init__(self, prevState, in_events, emit_event, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=default_trace_func)
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=lambda ev,msg,op:staged_trace_func("ConnectScenes",self.in_events['timestamp']['nframes'],self.in_events['timestamp']['metadata']['lineage'],ev,msg,op))
         logging.debug('in_events: '+str(in_events))

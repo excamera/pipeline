@@ -5,11 +5,17 @@ import uuid
 
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
 from pipeline.config import settings
-from pipeline.stages.util import default_trace_func,get_output_from_message
+from pipeline.stages.util import default_trace_func,get_output_from_message, staged_trace_func
 from pipeline.stages import InitStateTemplate, GetOutputStateTemplate
 
-class FinalState(TerminalState):
-    extra = "(finished)"
+class FinalState(OnePassState):
+    extra = "(sending quit)"
+    expect = None
+    command = "quit:"
+    nextState = TerminalState
+
+    def __init__(self, prevState):
+        super(FinalState, self).__init__(prevState)
 
 class EmitState(OnePassState):
     extra = "(emit)"
@@ -28,7 +34,8 @@ class EmitState(OnePassState):
                                        'lineage':metadata['lineage'],
                                        'nframes':self.in_events['frames']['nframes'],
                                        'boundingbox':self.local['output'],
-                                       'rek': self.local['rek']}) #whether rek was successful 
+                                       'rek': self.local['rek'],
+                                       'me':metadata['lineage'] }) #whether rek was successful 
 
         return self.nextState(self)  # don't forget this
 
@@ -75,6 +82,19 @@ class RunState(CommandListState):
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
 
-class InitState(InitStateTemplate):
+class InitState(CommandListState):
+
     nextState = RunState
+    extra = "(init)"
+
+    commandlist = [ ("OK:HELLO", "seti:nonblock:0")
+                  # , "run:rm -rf /tmp/*"
+                  , "run:mkdir -p ##TMPDIR##"
+                  , None
+                  ]
+
+    def __init__(self, prevState, in_events, emit_event, config):
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config,
+trace_func=lambda ev,msg,op:staged_trace_func("Rek_Modular",self.in_events['frames']['nframes'],self.in_events['frames']['me'],ev,msg,op))
+
 

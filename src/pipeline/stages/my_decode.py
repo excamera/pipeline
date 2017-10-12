@@ -5,8 +5,7 @@ import logging
 import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
-from pipeline.stages.util import default_trace_func,get_output_from_message
-
+from pipeline.stages.util import default_trace_func,get_output_from_message, staged_trace_func
 from copy import deepcopy 
 
 
@@ -32,12 +31,15 @@ class ConfirmEmitState(OnePassState):
     def post_transition(self):
         metadata = self.in_events['my_chunked_link']['metadata']
         #TODO: Solve this mysterious lineage problem?
-        metadata['lineage'] = self.in_events['my_chunked_link']['mynumber']
+        #metadata['lineage'] = self.in_events['my_chunked_link']['mynumber']
+        print "FOR DECODE"
+        print metadata['lineage']
+
 
         metacopy = deepcopy(metadata)
         metacopy['endChunk'] = self.in_events['my_chunked_link']['endChunk']
         self.emit_event('frames', {'metadata': metacopy, 'key': self.local['out_key'],
-            'nframes':self.local['output_count']})
+            'nframes':self.local['output_count'],'me':metadata['lineage']})
 
         return self.nextState(self)  # don't forget this
 
@@ -90,6 +92,8 @@ class RunState(CommandListState):
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
 
 class InitState(CommandListState):
+
+
     extra = "(init)"
     nextState = RunState
     commandlist = [("OK:HELLO", "seti:nonblock:0")
@@ -99,7 +103,9 @@ class InitState(CommandListState):
                    ]
 
     def __init__(self, prevState, in_events, emit_event, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=default_trace_func)
+
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config,trace_func=lambda ev,msg,op:staged_trace_func("my_decode",self.in_events['my_chunked_link']['frames'],self.in_events['my_chunked_link']['me'],ev,msg,op))
         self.local['out_key'] = settings['storage_base'] + in_events['my_chunked_link']['metadata'][
             'pipe_id'] + '/decode/' + libmu.util.rand_str(16) + '/'
+
         logging.debug('in_events: ' + str(in_events))

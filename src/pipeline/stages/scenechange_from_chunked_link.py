@@ -7,7 +7,8 @@ import math
 
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
-from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config
+from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config,staged_trace_func
+
 
 
 class FinalState(OnePassState):
@@ -47,7 +48,9 @@ class EmitState(OnePassState):
                                     'key': self.in_events['chunked_link_forScene']['key'],
                                     'seconds': (self.in_events['chunked_link_forScene']['starttime'],
                                         self.in_events['chunked_link_forScene']['starttime']+1),
-                                    'end':self.in_events['chunked_link_forScene']['end']})
+                                    'end':self.in_events['chunked_link_forScene']['end'],
+                                    'me':self.in_events['chunked_link_forScene']['lineage'],
+                                    'nframes':self.in_events['chunked_link_forScene']['frames']})
 
 
 
@@ -137,5 +140,6 @@ class InitState(CommandListState):
                   ]
 
     def __init__(self, prevState, in_events, emit_event,config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event,config=config, trace_func=default_trace_func)
+        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event,config=config,trace_func=lambda ev,msg,op:staged_trace_func("Scenechange",self.in_events['chunked_link_forScene']['frames'], self.in_events['chunked_link_forScene']['me'],\
+                ev,msg,op))
         logging.debug('in_events: '+str(in_events))

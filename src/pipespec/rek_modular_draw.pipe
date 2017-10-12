@@ -50,7 +50,7 @@
     },
     {
       "name": "encode",
-      "stage": "encode_frame_list",
+      "stage": "encode_frame_list_modular",
       "deliver_function": "serialized_frame_deliver_func",
       "config": {
       }
