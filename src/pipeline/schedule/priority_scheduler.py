@@ -18,10 +18,11 @@ class ConcurrencyLimitPriorityScheduler(ConcurrencyLimitScheduler):
         sorted_items = sorted(all_items, key=lambda item: int(item[0].values()[0]['metadata']['lineage']))
         ret = []
         for i in xrange(min(quota, len(sorted_items))):
-            event = sorted_items[i][0]
+            in_event = sorted_items[i][0]
             stage = sorted_items[i][1]
-            t = tracker.Task(stage.lambda_function, stage.init_state, event, stage.emit,
-                             stage.event, stage.config, regions=['us-east-1'])
+            t = tracker.Task(stage.lambda_function, stage.init_state, stage.event, in_events=in_event,
+                             emit_event=stage.emit, config=stage.config, pipe=pipeline.pipedata,
+                             regions=['us-east-1'])
             ret.append(t)
 
         for item in sorted_items[quota:]:

@@ -3,12 +3,14 @@ import Queue
 
 import logging
 import time
+
+from pipeline import DurableQueue
 from pipeline.config import settings
 from libmu import tracker
 from libmu.machine_state import ErrorState, TerminalState
 from pipeline.stages.util import default_deliver_func
-from pipeline.util.durable_queue import DurableQueue
-from . import print_task_states
+
+from pipeline.schedule import print_task_states
 import pdb
 
 
@@ -24,6 +26,7 @@ class SchedulerBase(object):
             for key, stage in pipeline.stages.iteritems():
                 stage.deliver_func = default_deliver_func if stage.deliver_func is None else stage.deliver_func
                 if any([not q.empty() and not isinstance(q, DurableQueue) for q in stage.buffer_queues.values()]):
+                    buffer_empty = False
                     stage.deliver_func(stage.buffer_queues, stage.deliver_queue,
                                        stale=len(tasks) == 0 and stage.deliver_queue.empty(),
                                        stage_conf=stage.config, stage_context=stage.context)
@@ -34,9 +37,11 @@ class SchedulerBase(object):
             error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
             if len(error_tasks) > 0:
                 logging.error(str(len(error_tasks))+" tasks failed: ")
+                errmsgs = []
                 for et in error_tasks:
                     logging.error(et.current_state.str_extra())
-                raise Exception(str(len(error_tasks))+" tasks failed")
+                    errmsgs.append(et.current_state.str_extra())
+                raise Exception(str(len(error_tasks))+" tasks failed\n"+"\n".join(errmsgs))
             tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
 
             if buffer_empty and deliver_empty and len(tasks) == 0:

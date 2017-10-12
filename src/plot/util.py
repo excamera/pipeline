@@ -17,7 +17,7 @@ def preprocess(lines, cmd_of_interest):
         msg = fields[3].strip()
         if lineage == '0' or op != 'send':
             continue
-        if not data.has_key(lineage):
+        if lineage not in data:
             data[lineage] = []
         if msg.startswith(cmd_of_interest):
         #if True:

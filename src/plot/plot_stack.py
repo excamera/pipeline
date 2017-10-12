@@ -42,19 +42,19 @@ cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect',
 def plot_stack(lines, chunk_length=None):
     data = preprocess(lines, cmd_of_interest)
     values = data.values()
-    values[1] = values[0]
-    j = len(values[0])-1
-    while j >= 0:
+    for j in reversed(xrange(0, len(values[0]))):
         ts = [r[j][0] for r in values]
+        label = values[0][j-1][1]
         if chunk_length:
-            drawn_line = plt.stackplot([chunk_length * x for x in xrange(1, len(data)+1)], ts)
+            xscale = [chunk_length * x for x in xrange(1, len(data)+1)]
         else:
-            drawn_line = plt.stackplot(xrange(1, len(data)+1), ts)
-        if j > 0:
-            drawn_line[0].set_label(values[0][j-1][1] if values[0][j-1][1] != 'quit' else 'wait')
-        else:
+            xscale = xrange(1, len(data)+1)
+        if j == 0 or label == 'quit:':
+            drawn_line = plt.stackplot(xscale, ts, color='0.9')
             drawn_line[0].set_label('wait')
-        j -= 1
+        else:
+            drawn_line = plt.stackplot(xscale, ts)
+            drawn_line[0].set_label(label)
 
     plt.legend(loc='best')
     plt.grid(b=True, axis='y')

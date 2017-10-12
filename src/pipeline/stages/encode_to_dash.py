@@ -4,6 +4,7 @@ import pdb
 
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
 from pipeline.config import settings
+from pipeline.stages import InitStateTemplate
 from pipeline.stages.util import default_trace_func, get_output_from_message
 from pipeline.util.media_probe import get_duration_from_output_lines
 
@@ -20,7 +21,8 @@ class EmitState(CommandListState):
 
     def __init__(self, prevState):
         super(EmitState, self).__init__(prevState)
-        self.emit_event('chunks', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['out_key']})
+        self.emit_event('chunks', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['out_key'],
+                                   'duration': self.local['duration']})
 
 
 class DashifyState(CommandListState):
@@ -74,6 +76,7 @@ class EncodeState(CommandListState):
 
     def __init__(self, prevState):
         super(EncodeState, self).__init__(prevState)
+        self.local['out_key'] = settings['storage_base']+self.in_events['frames']['metadata']['pipe_id']+'/encode_to_dash/'
 
         params = {'in_key': self.in_events['frames']['key'], 'fps': self.in_events['frames']['metadata']['fps'],
                   'segment': '%08d' % int(self.in_events['frames']['metadata']['lineage'])}
@@ -81,16 +84,5 @@ class EncodeState(CommandListState):
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
 
-class InitState(CommandListState):
-    extra = "(init)"
+class InitState(InitStateTemplate):
     nextState = EncodeState
-    commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  # , "run:rm -rf /tmp/*"
-                  , "run:mkdir -p ##TMPDIR##"
-                  , None
-                  ]
-
-    def __init__(self, prevState, in_events, emit, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit, config=config, trace_func=default_trace_func)
-        self.local['out_key'] = settings['storage_base']+in_events['frames']['metadata']['pipe_id']+'/encode_to_dash/'
-        logging.debug('in_events: '+str(in_events))
