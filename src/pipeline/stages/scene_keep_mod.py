@@ -74,9 +74,9 @@ class InitState(CommandListState):
         , None
                    ]
 
-    def __init__(self, prevState, in_events, emit_event, config):
-
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=lambda ev,msg,op:staged_trace_func("Scene_Keep",self.in_events['metadata']['nframes'],self.in_events['metadata']['me'],ev,msg,op))
+    def __init__(self, prevState, **kwargs):
+        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Scene_Keep",self.in_events['metadata']['nframes'], self.in_events['metadata']['me'],ev,msg,op))),**kwargs)
+        logging.debug('in_events: %s', kwargs['in_events'])
 
         if self.in_events['metadata']['rek'] == False:
             print "===FALSE"
@@ -85,5 +85,4 @@ class InitState(CommandListState):
             print "===TRUE"
             self.nextState = TryRekEmitState
 
-        logging.debug('in_events: ' + str(in_events))
 

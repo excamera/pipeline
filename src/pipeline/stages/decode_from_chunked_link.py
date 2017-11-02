@@ -31,6 +31,10 @@ class ConfirmEmitState(OnePassState):
     def post_transition(self):
         self.emit_event('frames', {'metadata': self.in_events['chunked_link']['metadata'], 'key': self.local['out_key']
             , 'nframes': self.local['output_count']})
+
+        #for smart serialization 
+        lineage = self.in_events['chunked_link']['metadata']['lineage']
+        self.pipe['frames_per_worker'][lineage] = self.local['output_count']
         return self.nextState(self)  # don't forget this
 
 

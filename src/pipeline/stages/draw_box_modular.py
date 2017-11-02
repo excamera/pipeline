@@ -60,8 +60,10 @@ class TryNoRekEmitState(OnePassState):
         super(TryNoRekEmitState, self).__init__(prevState)
        
         #extract just the pngs
-        self.local['key_list'] = [str(self.in_events['metadata']['key'] + \
-                str(i).rjust(8,'0') + '.png') for i in range(1,self.in_events['metadata']['nframes']+1)]
+        self.local['key_list'] = self.in_events['metadata']['key_list']
+        
+        #[str(self.in_events['metadata']['key'] + \
+        #        str(i).rjust(8,'0') + '.png') for i in range(1,self.in_events['metadata']['nframes']+1)]
 
 
 
@@ -111,7 +113,7 @@ class RunState(CommandListState):
     extra = "(run)"
     nextState = GetOutputState
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
-                  , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
+                  , ('OK:RETVAL(0)', 'collect_list:{pair_list}')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'run: python draw_box.py ' +\
                           '"{boundingbox}" ##TMPDIR##/in_0/*.png ##TMPDIR##/out_0/ 25') 
@@ -122,8 +124,15 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
+        
+        pair_list = []
+        for i in xrange(len(self.in_events['metadata']['key_list'])):
+            pair_list.append(self.in_events['metadata']['key_list'][i])
+            pair_list.append('##TMPDIR##/in_0/%08d.%s' % (i+1, self.in_events['metadata']['type']))
+
         self.local['dir'] = '##TMPDIR##/out_0/'
-        params = {'in_key': self.in_events['metadata']['key'],
+
+        params = {'pair_list': ' '.join(pair_list),
                 'boundingbox':self.in_events['metadata']['boundingbox']}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
@@ -138,14 +147,14 @@ class InitState(CommandListState):
         , None
                    ]
 
-    def __init__(self, prevState, in_events, emit_event, config):
-
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=lambda ev,msg,op:staged_trace_func("DrawBox",self.in_events['metadata']['nframes'],self.in_events['metadata']['me'],ev,msg,op))
+    
+    def __init__(self, prevState, **kwargs):
+        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("DrawBox",self.in_events['metadata']['nframes'], self.in_events['metadata']['me'],ev,msg,op))),**kwargs)
+        logging.debug('in_events: %s', kwargs['in_events'])
 
         if self.in_events['metadata']['rek'] == False:
             self.nextState = TryNoRekEmitState
         else:
             self.nextState = RunState
 
-        logging.debug('in_events: ' + str(in_events))
 

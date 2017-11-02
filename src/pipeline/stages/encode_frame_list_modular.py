@@ -20,7 +20,8 @@ class EmitState(CommandListState):
 
     def __init__(self, prevState):
         super(EmitState, self).__init__(prevState)
-        self.emit_event('chunks', {'metadata': self.in_events['frame_list']['metadata'], 'key': self.local['out_key']})
+        self.emit_event('chunks', {'metadata': self.in_events['frame_list']['metadata'], 'key': self.local['out_key'],
+            'duration': self.local['duration']})
 
 
 class DashifyState(CommandListState):
@@ -70,6 +71,8 @@ class EncodeState(CommandListState):
 
     def __init__(self, prevState):
         super(EncodeState, self).__init__(prevState)
+        self.local['out_key'] = settings['storage_base'] + self.in_events['frame_list']['metadata']['pipe_id'] + '/encode_frame_list/'
+
         pair_list = []
         for i in xrange(len(self.in_events['frame_list']['key_list'])):
             pair_list.append(self.in_events['frame_list']['key_list'][i])
@@ -90,7 +93,7 @@ class InitState(CommandListState):
                   , None
                   ]
 
-    def __init__(self, prevState, in_events, emit, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit, config=config, trace_func=lambda ev,msg,op:staged_trace_func("EncodeFrameList",self.in_events['frame_list']['metadata']['fps'],self.in_events['frame_list']['metadata']['lineage'],ev,msg,op))
-        self.local['out_key'] = settings['storage_base']+in_events['frame_list']['metadata']['pipe_id']+'/encode_frame_list/'
-        logging.debug('in_events: '+str(in_events))
+    def __init__(self, prevState, **kwargs):
+        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Encode_Frame_List",self.in_events['frame_list']['metadata']['fps'], self.in_events['frame_list']['metadata']['lineage'],ev,msg,op))),**kwargs)
+        logging.debug('in_events: %s', kwargs['in_events'])
+

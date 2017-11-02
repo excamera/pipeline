@@ -2,13 +2,14 @@
 import json
 import logging
 import pdb
-
 import math
-
+import libmu.util
+from collections import OrderedDict
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
+from pipeline.stages import InitStateTemplate
 from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config,staged_trace_func
-
+import datetime
 
 class FinalState(OnePassState):
     extra = "(sending quit)"
@@ -34,26 +35,44 @@ class EmitState(OnePassState):
         config = preprocess_config(self.config,
                                    {'fps': metadata['fps']})
         framesperchunk = (config.get('framesperchunk', metadata['fps']))  # default to 1 second chunk
+                                                                          # or can do 15 * metadata...
         overlap = config.get('overlap', 0)
 
         i = 0
         while i * (framesperchunk - overlap) / metadata['fps'] < self.local['duration']:  # actual parallelizing here
             metacopy = metadata.copy()
             starttime = i * (framesperchunk - overlap) / metadata['fps']
+
             metacopy['lineage'] = str(i+1)
             endChunk = False
             if ((i+1)*(framesperchunk - overlap) / metadata['fps'])>= self.local['duration']:
                 endChunk = True
 
-            self.emit_event('chunked_link_forScene', {'metadata': metacopy,
+            endtime = starttime+(framesperchunk/int(metadata['fps']))
+          
+            #for now just making each one second
+            starttime = i
+            endtime = i+1
+            if endtime > self.local['duration']:
+                endtime = self.local['duration']
+
+            metacopy['duration'] = self.local['duration']
+            self.emit_event('mod_chunked_link', {'metadata': metacopy,
                                        'key': self.in_events['video_link']['key'],
                                        'starttime': starttime,
+                                       'endtime': endtime,
                                        'frames': framesperchunk,
                                        'fps': metadata['fps'],
-                                       'lineage':starttime,
+                                       'lineage':i+1,
                                        'end': endChunk,
                                        'me': 1})
             i += 1
+
+
+        #initialize dictionary that will keep track of how many frames per worker
+        #we will have in intermediateConnect_scenes
+        #TODO: where should this initialization happen?
+        self.pipe['frames_per_worker'] = OrderedDict()
         return self.nextState(self)  # don't forget this
 
 
@@ -88,14 +107,13 @@ class RunState(CommandListState):
 
 
 class InitState(CommandListState):
-    extra = "(init)"
     nextState = RunState
+    extra = "(init)"
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  , "run:rm -rf /tmp/*"
+                  # , "run:rm -rf /tmp/*"
                   , "run:mkdir -p ##TMPDIR##"
                   , None
-                  ]
-
-    def __init__(self, prevState, in_events, emit_event, config):
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config, trace_func=lambda ev,msg,op:staged_trace_func("Distribute_Link",1,1,ev,msg,op))
-        logging.debug('in_events: '+str(in_events))
+                  ]   
+    def __init__(self, prevState, **kwargs):
+       super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Distribute_Link",1,1,ev,msg,op))),**kwargs)
+       logging.debug('in_events: %s', kwargs['in_events'])

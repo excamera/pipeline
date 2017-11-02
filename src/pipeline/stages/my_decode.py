@@ -29,17 +29,15 @@ class ConfirmEmitState(OnePassState):
         super(ConfirmEmitState, self).__init__(prevState)
 
     def post_transition(self):
-        metadata = self.in_events['my_chunked_link']['metadata']
-        #TODO: Solve this mysterious lineage problem?
-        #metadata['lineage'] = self.in_events['my_chunked_link']['mynumber']
-        print "FOR DECODE"
-        print metadata['lineage']
-
+        metadata = self.in_events['mod_chunked_link']['metadata']
 
         metacopy = deepcopy(metadata)
-        metacopy['endChunk'] = self.in_events['my_chunked_link']['endChunk']
+        metacopy['end'] = self.in_events['mod_chunked_link']['end']
+
         self.emit_event('frames', {'metadata': metacopy, 'key': self.local['out_key'],
-            'nframes':self.local['output_count'],'me':metadata['lineage']})
+            'nframes':self.local['output_count'],'me':metadata['lineage'],
+            'seconds':(self.in_events['mod_chunked_link']['starttime'],
+                       self.in_events['mod_chunked_link']['endtime'])})
 
         return self.nextState(self)  # don't forget this
 
@@ -85,9 +83,11 @@ class RunState(CommandListState):
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
 
-        params = {'starttime': self.in_events['my_chunked_link']['starttime'],
-                  'frames': self.in_events['my_chunked_link']['frames'],
-                  'URL': self.in_events['my_chunked_link']['key'], 'out_key': self.local['out_key']}
+        self.local['out_key'] = settings['storage_base']+self.in_events['mod_chunked_link']['metadata']['pipe_id']+'/decode/'+libmu.util.rand_str(16)+'/'
+
+        params = {'starttime': self.in_events['mod_chunked_link']['starttime'],
+                  'frames': self.in_events['mod_chunked_link']['frames'],
+                  'URL': self.in_events['mod_chunked_link']['key'], 'out_key': self.local['out_key']}
         logging.debug('params: ' + str(params))
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
 
@@ -102,10 +102,10 @@ class InitState(CommandListState):
         , None
                    ]
 
-    def __init__(self, prevState, in_events, emit_event, config):
 
-        super(InitState, self).__init__(prevState, in_events=in_events, emit_event=emit_event, config=config,trace_func=lambda ev,msg,op:staged_trace_func("my_decode",self.in_events['my_chunked_link']['frames'],self.in_events['my_chunked_link']['me'],ev,msg,op))
-        self.local['out_key'] = settings['storage_base'] + in_events['my_chunked_link']['metadata'][
-            'pipe_id'] + '/decode/' + libmu.util.rand_str(16) + '/'
+    def __init__(self, prevState, **kwargs):
+        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("my_decode",self.in_events['mod_chunked_link']['frames'], self.in_events['mod_chunked_link']['me'],\
+                ev,msg,op))),**kwargs)
+        logging.debug('in_events: %s', kwargs['in_events'])
 
-        logging.debug('in_events: ' + str(in_events))
+
