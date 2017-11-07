@@ -5,6 +5,8 @@ import pdb
 
 import math
 
+import copy
+
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
 from pipeline.stages import InitStateTemplate
@@ -40,7 +42,7 @@ class EmitState(OnePassState):
         i = 0
         while i * (float(framesperchunk) - overlap) / metadata['fps'] < self.local['duration']:
             # actual parallelizing here
-            newmeta = metadata.copy()
+            newmeta = copy.deepcopy(metadata)
             starttime = i * (float(framesperchunk) - overlap) / metadata['fps']
             newmeta['lineage'] = str(i + 1)
             newmeta['chunk_duration'] = float(framesperchunk) / metadata['fps']
