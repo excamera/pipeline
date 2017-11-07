@@ -37,7 +37,7 @@ class ConfirmEmitState(OnePassState):
 class TryEmitState(OnePassState):
     extra = "(emit output)"
     expect = None
-    command = 'emit:##TMPDIR##/out_0 {out_key}'
+    command = 'emit:##TMPDIR##/out_1 {out_key}'
     nextState = ConfirmEmitState
 
     def __init__(self, prevState):
@@ -63,12 +63,13 @@ class CheckOutputState(IfElseState):
 class RunState(CommandListState):
     extra = "(run)"
     nextState = CheckOutputState
-    commandlist = [(None, 'run:mkdir -p ##TMPDIR##/out_0/')
+    commandlist = [(None, 'run:mkdir -p ##TMPDIR##/out_0/ ##TMPDIR##/out_1/')
         , ('OK:RETVAL(0)',
            'run:./youtube-dl --get-url {URL} -f "{selector}" 2>/dev/null | head -n1 | xargs -IPLACEHOLDER '
            './ffmpeg -y -ss {starttime} -i PLACEHOLDER -frames {frames} -f image2 -c:v png '
            '-start_number 1 ##TMPDIR##/out_0/%08d.png')
-        , ('OK:RETVAL(0)', 'run:find ##TMPDIR##/out_0/ -name "*png" | wc -l')
+        , ('OK:RETVAL(0)', 'run:tar -cvf ##TMPDIR##/out_1/files.tar -C ##TMPDIR##/out_0/ .')
+        , ('OK:RETVAL(', 'run:find ##TMPDIR##/out_0/ -name "*png" | wc -l')
                    # result will be used in next state
                    ]
 

@@ -27,9 +27,10 @@ class EmitState(CommandListState):
 class RunState(CommandListState):
     extra = "(run)"
     nextState = EmitState
-    commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
-                  , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
-                  , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
+    commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/ ##TMPDIR##/in_1/')
+                  , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_1')
+                  , ('OK:COLLECT', 'run:tar -xvf ##TMPDIR##/in_1/files.tar -C ##TMPDIR##/in_0/')
+                  , ('OK:RETVAL(0)', 'run:mkdir -p ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'run:./ffmpeg -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
                                      '-vf hue=s=0 -c:a copy -safe 0 -start_number 1 ##TMPDIR##/out_0/%08d.png')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
