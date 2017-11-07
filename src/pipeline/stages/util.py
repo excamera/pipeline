@@ -548,10 +548,10 @@ def get_output_from_message(msg):
 def preprocess_config(config, existing):
     new_config = {}
     for k, v in config.iteritems():
-        new_value = v.format(**existing)
         try:
+            new_value = v.format(**existing)
             new_value = eval(new_value)
+            new_config[k] = new_value
         except:
-            pass
-        new_config[k] = new_value
+            new_config[k] = v
     return new_config
