@@ -1,0 +1,33 @@
+{
+  "nodes":[
+    {
+      "name": "parlink",
+      "stage": "parallelize_link",
+      "config": {
+        "framesperchunk": "{fps}"
+      }
+    },
+    {
+      "name": "null",
+      "stage": "null",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_link",
+      "dst": "parlink:video_link"
+    },
+    {
+      "src": "parlink:chunked_link",
+      "dst": "null:chunked_link"
+    },
+        {
+      "src": "null:chunked_link",
+      "dst": "output_0:chunked_link"
+    }
+  ]
+}

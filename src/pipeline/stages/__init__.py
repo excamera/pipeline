@@ -1,6 +1,6 @@
 import logging
 
-from libmu import CommandListState, OnePassState
+from libmu import CommandListState, OnePassState, TerminalState
 from pipeline.stages.util import default_trace_func, get_output_from_message
 
 
@@ -53,3 +53,13 @@ class GetOutputStateTemplate(OnePassState):
 
     def __init__(self, prevState):
         super(GetOutputStateTemplate, self).__init__(prevState)
+
+
+class FinalStateTemplate(OnePassState):
+    extra = "(sending quit)"
+    expect = None
+    command = "quit:"
+    nextState = TerminalState
+
+    def __init__(self, prevState):
+        super(FinalStateTemplate, self).__init__(prevState)
