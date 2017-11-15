@@ -29,7 +29,7 @@ class SchedulerBase(object):
                     buffer_empty = False
                     stage.deliver_func(stage.buffer_queues, stage.deliver_queue,
                                        stale=len(tasks) == 0 and stage.deliver_queue.empty(),
-                                       stage_conf=stage.config, stage_context=stage.context)
+                                       stage_conf=stage.config, stage_context=stage.context, pipedata=pipeline.pipedata)
 
             if cls.submit_tasks(pipeline, tasks) != 0:
                 deliver_empty = False
