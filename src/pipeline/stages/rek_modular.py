@@ -7,6 +7,7 @@ from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePas
 from pipeline.config import settings
 from pipeline.stages.util import default_trace_func,get_output_from_message, staged_trace_func
 from pipeline.stages import InitStateTemplate, GetOutputStateTemplate
+import time 
 
 class FinalState(OnePassState):
     extra = "(sending quit)"
@@ -16,6 +17,12 @@ class FinalState(OnePassState):
 
     def __init__(self, prevState):
         super(FinalState, self).__init__(prevState)
+
+        g_end = time.time()
+        executionTime = str(g_end - self.local['g_start']) 
+        self.pipe['benchmarkFile'].write("\nStage:Rek\n")
+        self.pipe['benchmarkFile'].write("Lineage:" + str(self.local['lineage'])+"\n")
+        self.pipe['benchmarkFile'].write(str(executionTime))
 
 class EmitState(OnePassState):
     extra = "(emit)"
@@ -27,17 +34,28 @@ class EmitState(OnePassState):
         super(EmitState, self).__init__(prevState)
 
     def post_transition(self):
-        metadata = self.in_events['scene_list']['metadata']
 
-        self.emit_event('metadata', {'metadata': metadata,
-                                       'key_list': self.local['key_list'], #pass decode's key
-                                       'fps': metadata['fps'],
-                                       'lineage':metadata['lineage'],
-                                       'nframes':self.in_events['scene_list']['metadata']['duration'],
-                                       'boundingbox':self.local['output'],
-                                       'rek': self.local['rek'], #whether rek was successful
-                                       'me':metadata['lineage'],
-                                       'type':self.in_events['scene_list']['type']}) 
+
+        for i in xrange(len(self.local['key_list'])):
+
+            metadata = self.in_events['scene_list']['metadata']
+            self.local['lineage'] = metadata['lineage']
+            metadata['rek'] = self.local['rek']#whether rek was successful
+            metadata['me'] = metadata['lineage']#for benchmarking
+            metadata['boundingbox'] = self.local['output']
+
+
+            self.emit_event('frame', {'metadata': metadata, 
+                    'key': self.local['key_list'][i],'number':i+1,
+                    'EOF': i == len(self.local['key_list'])-1, 
+                    'type':self.in_events['scene_list']['type'],
+                    'fps': metadata['fps'],
+                    'lineage':metadata['lineage'],
+                    'nframes':self.in_events['scene_list']['metadata']['duration'],
+                    'switch': True
+                    })
+
+
         return self.nextState(self)  # don't forget this
 
 
@@ -109,11 +127,12 @@ class InitState(CommandListState):
         super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Rek_Modular",len(self.in_events['scene_list']['key_list']), self.in_events['scene_list']['metadata']['lineage'],ev,msg,op))),**kwargs)
 
 
+        self.local['g_start'] = time.time()
         lineage = int(self.in_events['scene_list']['metadata']['lineage'])
         nframes = len(self.in_events['scene_list']['key_list'])
 
         #populate for smart_serial delivery in encode
-        self.pipe['frames_per_worker'][lineage] = nframes
+        #self.pipe['frames_per_worker'][lineage] = nframes
         logging.debug('in_events: %s', kwargs['in_events'])
 
 

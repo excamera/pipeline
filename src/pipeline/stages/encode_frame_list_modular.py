@@ -7,10 +7,23 @@ from pipeline.config import settings
 from pipeline.stages.util import default_trace_func, staged_trace_func, get_output_from_message
 from pipeline.util.media_probe import get_duration_from_output_lines
 
+import time 
+import os
 
 class FinalState(TerminalState):
     extra = "(finished)"
 
+    def __init__(self, prevState):
+        super(FinalState, self).__init__(prevState)
+        self.local['lineage'] = self.in_events['frame_list']['metadata']['lineage'] 
+        g_end = time.time()
+        executionTime = str(g_end - self.local['g_start']) 
+        self.pipe['benchmarkFile'].write("\nStage:Encode\n")
+        self.pipe['benchmarkFile'].write("Lineage:" + str(self.local['lineage'])+"\n")
+        self.pipe['benchmarkFile'].write(str(executionTime))
+        # close txt file 
+        self.pipe['benchmarkFile'].flush()
+        #os.fsync()
 
 class EmitState(CommandListState):
     extra = "(emit output)"
@@ -96,4 +109,4 @@ class InitState(CommandListState):
     def __init__(self, prevState, **kwargs):
         super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Encode_Frame_List",self.in_events['frame_list']['metadata']['fps'], self.in_events['frame_list']['metadata']['lineage'],ev,msg,op))),**kwargs)
         logging.debug('in_events: %s', kwargs['in_events'])
-
+        self.local['g_start'] = time.time()

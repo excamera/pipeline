@@ -37,13 +37,14 @@
       "name": "draw",
       "stage": "draw_box_modular",
       "lambda_function": "tempc_L9sPa8gl",
+      "deliver_function": "serialized_scene_deliver_func",
       "config": {
       }
     },
     {
       "name": "encode",
       "stage": "encode_frame_list_modular",
-      "deliver_function": "smart_serialized_frame_deliver_func",
+      "deliver_function": "serialized_frame_deliver_func",
       "config": {
       }
     }
@@ -72,8 +73,8 @@
       "dst": "rek:scene_list"
     },
     {
-      "src": "rek:metadata",
-      "dst": "draw:metadata"
+      "src": "rek:frame",
+      "dst": "draw:frame"
     },
     {
       "src": "draw:frame",

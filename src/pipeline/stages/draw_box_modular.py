@@ -7,7 +7,7 @@ from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePas
 from pipeline.config import settings
 from pipeline.stages.util import default_trace_func,get_output_from_message, staged_trace_func
 from pipeline.stages import InitStateTemplate, GetOutputStateTemplate
-
+import time 
 
 class FinalState(OnePassState):
     extra = "(sending quit)"
@@ -18,6 +18,12 @@ class FinalState(OnePassState):
     def __init__(self, prevState):
         super(FinalState, self).__init__(prevState)
 
+        g_end = time.time()
+        executionTime = str(g_end - self.local['g_start']) 
+        self.pipe['benchmarkFile'].write("\nStage:Draw\n")
+        self.pipe['benchmarkFile'].write("Lineage:" + str(self.local['lineage'])+"\n")
+        self.pipe['benchmarkFile'].write(str(executionTime))
+
 class ConfirmRekEmitState(OnePassState):
     nextState = FinalState
     expect = "OK:EMIT_LIST"
@@ -27,11 +33,15 @@ class ConfirmRekEmitState(OnePassState):
 
     def post_transition(self):
 
+            self.local['lineage'] = self.in_events['frame']['metadata']['lineage']
+ 
             for i in xrange(len(self.local['key_list'])):
-                self.emit_event('frame', {'metadata': self.in_events['metadata']['metadata'], 
+
+                self.emit_event('frame', {'metadata': self.in_events['frame']['metadata'], 
                     'key': self.local['key_list'][i],'number':i+1,
                     'EOF': i == len(self.local['key_list'])-1, 'type': 'png',
-                    'nframes': self.in_events['metadata']['nframes']})
+                    'nframes': self.in_events['frame']['nframes'],
+                    'me':self.in_events['frame']['metadata']['lineage']})
 
             return self.nextState(self)  # don't forget this
 
@@ -43,12 +53,15 @@ class ConfirmNoRekEmitState(OnePassState):
 
     def post_transition(self):
 
+            self.local['lineage'] = self.in_events['frame']['metadata']['lineage']
+
             for i in xrange(len(self.local['key_list'])):
-                self.emit_event('frame', {'metadata': self.in_events['metadata']['metadata'], 
+
+                self.emit_event('frame', {'metadata': self.in_events['frame']['metadata'], 
                     'key': self.local['key_list'][i],'number':i+1,
                     'EOF': i == len(self.local['key_list'])-1, 'type': 'png',
-                    'nframes': self.in_events['metadata']['nframes'],
-                    'me':self.in_events['metadata']['lineage']})
+                    'nframes': self.in_events['frame']['nframes'],
+                    'me':self.in_events['frame']['metadata']['lineage']})
 
             return self.nextState(self)  # don't forget this
 
@@ -60,7 +73,7 @@ class TryNoRekEmitState(OnePassState):
         super(TryNoRekEmitState, self).__init__(prevState)
        
         #extract just the pngs
-        self.local['key_list'] = self.in_events['metadata']['key_list']
+        self.local['key_list'] = self.in_events['frame']['key_list']
         
         #[str(self.in_events['metadata']['key'] + \
         #        str(i).rjust(8,'0') + '.png') for i in range(1,self.in_events['metadata']['nframes']+1)]
@@ -78,7 +91,7 @@ class TryRekEmitState(CommandListState):
        
         flist = self.local['output']
 
-        self.local['key_list'] = [settings['storage_base'] + self.in_events['metadata']['metadata'][
+        self.local['key_list'] = [settings['storage_base'] + self.in_events['frame']['metadata'][
         'pipe_id'] + '/draw_box/' + str(uuid.uuid4()) for f in flist]
         pairs = [flist[i] + ' ' + self.local['key_list'][i] for i in xrange(len(self.local['key_list']))]
         self.commands = [s.format(**{'pairs': ' '.join(pairs)}) if s is not None else None for s in self.commands]
@@ -126,14 +139,14 @@ class RunState(CommandListState):
         super(RunState, self).__init__(prevState)
         
         pair_list = []
-        for i in xrange(len(self.in_events['metadata']['key_list'])):
-            pair_list.append(self.in_events['metadata']['key_list'][i])
-            pair_list.append('##TMPDIR##/in_0/%08d.%s' % (i+1, self.in_events['metadata']['type']))
+        for i in xrange(len(self.in_events['frame']['key_list'])):
+            pair_list.append(self.in_events['frame']['key_list'][i])
+            pair_list.append('##TMPDIR##/in_0/%08d.%s' % (i+1, self.in_events['frame']['type']))
 
         self.local['dir'] = '##TMPDIR##/out_0/'
 
         params = {'pair_list': ' '.join(pair_list),
-                'boundingbox':self.in_events['metadata']['boundingbox']}
+                'boundingbox':self.in_events['frame']['metadata']['boundingbox']}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
@@ -149,12 +162,22 @@ class InitState(CommandListState):
 
     
     def __init__(self, prevState, **kwargs):
-        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("DrawBox",self.in_events['metadata']['nframes'], self.in_events['metadata']['me'],ev,msg,op))),**kwargs)
+        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("DrawBox",self.in_events['frame']['nframes'], self.in_events['frame']['metadata']['me'],ev,msg,op))),**kwargs)
         logging.debug('in_events: %s', kwargs['in_events'])
 
-        if self.in_events['metadata']['rek'] == False:
+        self.local['g_start'] = time.time()
+        nframes =  self.in_events['frame']['nframes']
+        lineage = int(self.in_events['frame']['metadata']['lineage'])
+
+        if self.in_events['frame']['metadata']['rek'] == False:
+            #populate for smart_serial delivery in encode
+            self.pipe['frames_per_worker'][lineage] = nframes
+
             self.nextState = TryNoRekEmitState
         else:
+            #populate for smart_serial delivery in encode
+            self.pipe['frames_per_worker'][lineage] = nframes
+
             self.nextState = RunState
 
 

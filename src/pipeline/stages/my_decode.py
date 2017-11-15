@@ -7,7 +7,7 @@ from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePas
 from pipeline.config import settings
 from pipeline.stages.util import default_trace_func,get_output_from_message, staged_trace_func
 from copy import deepcopy 
-
+import time 
 
 class FinalState(OnePassState):
     extra = "(sending quit)"
@@ -17,7 +17,13 @@ class FinalState(OnePassState):
 
     def __init__(self, prevState):
         super(FinalState, self).__init__(prevState)
+        g_end = time.time()
+        executionTime = str(g_end - self.local['g_start']) 
+        metadata = self.in_events['mod_chunked_link']['metadata']
 
+        self.pipe['benchmarkFile'].write("\nStage:Decode\n")
+        self.pipe['benchmarkFile'].write("Lineage:" + str(metadata['lineage']+"\n"))
+        self.pipe['benchmarkFile'].write(str(executionTime))
 
 class ConfirmEmitState(OnePassState):
     extra = "(confirm emit)"
@@ -33,9 +39,10 @@ class ConfirmEmitState(OnePassState):
 
         metacopy = deepcopy(metadata)
         metacopy['end'] = self.in_events['mod_chunked_link']['end']
+        self.local['lineage'] = metadata['lineage']
 
         self.emit_event('frames', {'metadata': metacopy, 'key': self.local['out_key'],
-            'nframes':self.local['output_count'],'me':metadata['lineage'],
+            'nframes':self.local['output_count'],'me':self.local['lineage'],
             'seconds':(self.in_events['mod_chunked_link']['starttime'],
                        self.in_events['mod_chunked_link']['endtime'])})
 
@@ -107,5 +114,8 @@ class InitState(CommandListState):
         super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("my_decode",self.in_events['mod_chunked_link']['frames'], self.in_events['mod_chunked_link']['me'],\
                 ev,msg,op))),**kwargs)
         logging.debug('in_events: %s', kwargs['in_events'])
+        self.local['g_start'] = time.time()
+
+
 
 

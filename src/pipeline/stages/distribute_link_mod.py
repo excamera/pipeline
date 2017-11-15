@@ -73,7 +73,13 @@ class EmitState(OnePassState):
         #we will have in intermediateConnect_scenes
         #TODO: where should this initialization happen?
         self.pipe['frames_per_worker'] = OrderedDict()
-        return self.nextState(self)  # don't forget this
+
+        # set up for benchmarking times 
+        pipe= str(self.in_events['video_link']['metadata']['pipe_id'])
+        benchmarkFile = open(str("benchmarks/benchmarkFile" + pipe + ".txt"), "w")
+        self.pipe['benchmarkFile'] = benchmarkFile
+
+        return self.nextState(self)  # don't forget thiss
 
 
 class GetOutputState(OnePassState):

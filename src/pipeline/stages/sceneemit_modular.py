@@ -9,7 +9,7 @@ from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePas
 from pipeline.config import settings
 from pipeline.stages.util import default_trace_func, get_output_from_message, preprocess_config,staged_trace_func
 from copy import deepcopy
-
+import time 
 
 class FinalState(OnePassState):
     extra = "(sending quit)"
@@ -20,7 +20,12 @@ class FinalState(OnePassState):
     def __init__(self, prevState):
         super(FinalState, self).__init__(prevState)
 
-
+        g_end = time.time()
+        executionTime = str(g_end - self.local['g_start']) 
+        self.pipe['benchmarkFile'].write("\nStage:SceneChange\n")
+        self.pipe['benchmarkFile'].write("Lineage:" + str(self.local['lineage'])+"\n")
+        self.pipe['benchmarkFile'].write(str(executionTime))
+        #self.pipe['benchmarkFile'].close()
 class EmitState(OnePassState):
     extra = "(emit)"
     expect = None
@@ -38,6 +43,7 @@ class EmitState(OnePassState):
 
         metadata = self.in_events['frames']['metadata']
         fps = metadata['fps'] 
+        self.local['lineage'] = self.in_events['frames']['metadata']['lineage']
 
         #put scene change markers 
         t1 = self.local['start_time']
@@ -52,62 +58,20 @@ class EmitState(OnePassState):
             if i in timeMarkers:
                 sceneChange = True
 
-                print self.local['start_time']
-                print "scenechange at: " + str(i)
-
             #mark the last piece as a scenechange as well
             if metadata['end'] and (i == len(self.local['key_list'])-1):
                 sceneChange = True
-
-                print self.local['start_time']
-                print "end at: " + str(i)
-
-           
-            if (i == (len(self.local['key_list'])-1)):
-                print "EOF HERE"
-                print "total chunks: " 
-                print (i+1)
-                print "lineage"
-                print self.in_events['frames']['metadata']['lineage']
 
             self.emit_event('scene_list', {'metadata': self.in_events['frames']['metadata'], 
                     'key': self.local['key_list'][i],'number':i+1,
                     'EOF': i == len(self.local['key_list'])-1, 'type': 'png',
                     'nframes': self.in_events['frames']['nframes'],
                     'me':self.in_events['frames']['metadata']['lineage'],
-                    'sceneChange': sceneChange
+                    'switch': sceneChange
                     })
                     #TODO: Do i need to include seconds or startime?? i dont think so..
 
         return self.nextState(self)  # don't forget this
-         
-        #TODO: Delete the bottom once i am confident i have all the info 
-        """
-        metadata = self.in_events['frames']['metadata']
-        fps = metadata['fps'] 
-
-        metacopy = deepcopy(metadata)
-        print "Scenechange"
-        print str(self.in_events['frames']['seconds'])
-        print metacopy['lineage']
-
-        if len(self.local['times']) >0:
-            print self.local['times']
-
-        print "key scene"
-        print self.in_events['frames']['key']
-
-        self.emit_event('timestamp',{'output':self.local['times'],
-                                    'lineage':metacopy['lineage'],
-                                    'metadata':metacopy,
-                                    'key': self.in_events['frames']['key'],
-                                    'seconds': self.in_events['frames']['seconds'],
-                                    'end':metacopy['end'],
-                                    'me':metacopy['lineage'],
-                                    'nframes':self.in_events['frames']['nframes']})
-
-        return self.nextState(self)  # don't forget this
-        """
 
 
 class GetOutputState(OnePassState):
@@ -164,5 +128,5 @@ class InitState(CommandListState):
     def __init__(self, prevState, **kwargs):
         super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Scenechange",self.in_events['frames']['nframes'], self.in_events['frames']['me'],ev,msg,op))),**kwargs)
         logging.debug('in_events: %s', kwargs['in_events'])
-
+        self.local['g_start'] = time.time()
 
