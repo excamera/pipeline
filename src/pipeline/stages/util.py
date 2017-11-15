@@ -128,7 +128,7 @@ def smart_serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
             return merged
 
     # put together the score board of which seconds will need which frames to complete
-    def makeEvents(fps,f_dic):
+    def makeEvents(fps,f_dic,sent_lineages):
 
         #insert the frames into events
         def insertEvent(events,second,key,start,up_to):
@@ -173,7 +173,11 @@ def smart_serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
 		            cur_frames = 0 #reset where were at 
 		            second+=1
 
-        print events
+        #dont add sent seconds 
+        for sec,v in events.items():
+            if sec in sent_lineages:
+                del events[sec]
+
         return events
 
     def diff(first, second):
@@ -195,10 +199,12 @@ def smart_serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
     
     #storage of what workers each second of video will need
     events = stage_context.get( 'events', {})
+    sentLineages = stage_context.get('sentLineages', set())
 
-    #then initialize it 
+    #then initialize it
     if events=={}:
-        stage_context['events'] =  makeEvents(fps,pipedata['frames_per_worker'])
+        stage_context['events'] =  makeEvents(fps,pipedata['frames_per_worker'],sentLineages)
+        events = stage_context['events'] 
 
 
     #populate the available_events dictionary
@@ -241,6 +247,8 @@ def smart_serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
 			sending.extend(available_events[my_second][from_s:to_s])
                         no_send[my_second] = available_events[my_second][from_s:to_s]
                         local_noSend.extend(available_events[my_second][from_s:to_s])
+                        #dont add to future events
+                        sentLineages.add(second)
 
 
 	if canSend and not stale:
@@ -250,20 +258,26 @@ def smart_serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
                 total_sent.extend(sending)
 
                 merged['frame_list']['metadata']['duration'] = len(merged['frame_list']['key_list'])
-        	deliver_queue.put(merged) 
+        	deliver_queue.put(merged)
+
 		logging.info("delivered: %s", merged)
                 #reset which to put back into the
 
+                print events
                 del events[second] 
 
+    
+    stage_context['sentLineages'] = sentLineages
 
     #put back onto queue
     #TODO: Not entirely sure of this putting back algo
     if not stale:
         for lineage in available_events:
-            toSend = diff(available_events[lineage],local_noSend)
+            toSend = diff(available_events[lineage],total_sent)#local_noSend
             for item in toSend:
 	            buffer_queues.values()[0].put(item)
+
+
                     
 
 def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
@@ -274,8 +288,8 @@ def serialized_frame_deliver_func(buffer_queues, deliver_queue, **kwargs):
         sample = deepcopy(events[0])
         sample['frame_list']['metadata']['lineage'] = lineage
         klist = [e['frame_list']['key'] for e in events]
-        merged['frame_list'] = {'metadata': deepcopy(sample['frame_list']['metadata']), 'type': deepcopy(sample['frame_list']['type']),
-                                'key_list': klist}
+        merged['frame_list'] = {'metadata': deepcopy(sample['frame_list']['metadata']), 
+                'type': deepcopy(sample['frame_list']['type']), 'key_list': klist}
         return merged
 
     assert len(buffer_queues) == 1  # TODO: add validator when creating pipe
@@ -443,12 +457,19 @@ def serialized_scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
     def merge_events(events, lineage):
         merged = {}
         sample = deepcopy(events[0])
-        sample['scene_list']['metadata']['lineage'] = lineage
-        klist = [e['scene_list']['key'] for e in events]
-        sample['scene_list']['metadata']['duration'] = len(klist)
-        merged['scene_list'] = {'metadata': deepcopy(sample['scene_list']['metadata']), 
-                                'type': deepcopy(sample['scene_list']['type']),
-                                'key_list': klist}
+
+        for key in sample:
+            thekey = key
+            break
+
+
+        sample[thekey]['metadata']['lineage'] = lineage
+        klist = [e[thekey]['key'] for e in events]
+        sample[thekey]['metadata']['duration'] = len(klist)
+        merged[thekey] = {'metadata': deepcopy(sample[thekey]['metadata']), 
+                                'type': deepcopy(sample[thekey]['type']),
+                                'key_list': klist,
+                                'nframes':len(klist)}
         return merged
 
     assert len(buffer_queues) == 1  # TODO: add validator when creating pipe
@@ -482,7 +503,7 @@ def serialized_scene_deliver_func(buffer_queues, deliver_queue, **kwargs):
                 expecting+=1
 
             #if this isnt a scenechange, add it to the scene
-            if not bool(ordered_events[current].values()[0]['sceneChange']):
+            if not bool(ordered_events[current].values()[0]['switch']):
                 current +=1
 
                 continue
