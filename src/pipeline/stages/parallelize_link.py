@@ -36,16 +36,16 @@ class EmitState(OnePassState):
         metadata = self.in_events['video_link']['metadata']
         config = preprocess_config(self.config,
                                    {'fps': metadata['fps']})
-        framesperchunk = config.get('framesperchunk', metadata['fps'])  # default to 1 second chunk
+        framesperchunk = float(config.get('framesperchunk', metadata['fps']))  # default to 1 second chunk
         overlap = config.get('overlap', 0)
 
         i = 0
-        while i * (float(framesperchunk) - overlap) / metadata['fps'] < self.local['duration']:
+        while i * (framesperchunk - overlap) / metadata['fps'] < self.local['duration'] and i != int(config.get('chunklimit', -1)):
             # actual parallelizing here
             newmeta = copy.deepcopy(metadata)
-            starttime = i * (float(framesperchunk) - overlap) / metadata['fps']
+            starttime = i * (framesperchunk - overlap) / metadata['fps']
             newmeta['lineage'] = str(i + 1)
-            newmeta['chunk_duration'] = float(framesperchunk) / metadata['fps']
+            newmeta['chunk_duration'] = framesperchunk / metadata['fps']
             self.emit_event('chunked_link', {'metadata': newmeta,
                                              'key': self.in_events['video_link']['key'],
                                              'selector': self.local['selector'],
