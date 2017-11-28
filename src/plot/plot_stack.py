@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 from util import preprocess
 
-cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl')
-
+cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl', 'run:tar')
+#cmd_of_interest = ('')
 # def plot_lines(lines):
 #     start = float(lines[0].split(',')[0])
 #     data = OrderedDict()
@@ -39,7 +39,7 @@ cmd_of_interest = ('seti', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect',
 #     plt.show()
 
 
-def plot_stack(lines, chunk_length=None):
+def plot_stack(lines, chunk_length=None, ystart=None):
     data = preprocess(lines, cmd_of_interest)
     values = data.values()
     for j in reversed(xrange(0, len(values[0]))):
@@ -49,7 +49,7 @@ def plot_stack(lines, chunk_length=None):
             xscale = [chunk_length * x for x in xrange(1, len(data)+1)]
         else:
             xscale = xrange(1, len(data)+1)
-        if j == 0 or label == 'quit:':
+        if j == 0 or 'quit:' in label:
             drawn_line = plt.stackplot(xscale, ts, color='0.9')
             drawn_line[0].set_label('wait')
         else:
@@ -65,6 +65,11 @@ def plot_stack(lines, chunk_length=None):
         plt.xlabel('lineage number')
     new_axis = plt.axis()
     plt.axis((new_axis[0], new_axis[1]*1.1, new_axis[2], new_axis[3]))
+    if ystart is not None:
+        length = 180
+        xstart = 1
+        plt.plot([xstart, xstart+length], [ystart, ystart+length], color='k', linestyle='-', linewidth=2)
+
     plt.show()
 
 
@@ -72,9 +77,12 @@ if __name__ == '__main__':
     with open(sys.argv[1], 'r') as f:
         lines = f.readlines()
 
-    if len(sys.argv) == 3:
+    chunk_length = None
+    ystart = None
+    if len(sys.argv) >= 3:
         chunk_length = float(sys.argv[2])
-    else:
-        chunk_length = None
+    if len(sys.argv) >= 4:
+        ystart = float(sys.argv[3])
 
-    plot_stack(lines, chunk_length)
+    plot_stack(lines, chunk_length, ystart)
+
