@@ -22,7 +22,7 @@ class ConcurrencyLimitRandomScheduler(ConcurrencyLimitScheduler):
             event = all_items[i][0]
             stage = all_items[i][1]
             t = tracker.Task(stage.lambda_function, stage.init_state, event, stage.emit,
-                             stage.event, stage.config, regions=['us-east-1'])
+                             stage.event, stage.config, regions=stage.region)
             ret.append(t)
 
         for item in all_items[quota:]:

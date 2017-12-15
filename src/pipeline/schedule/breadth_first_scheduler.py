@@ -14,7 +14,7 @@ class ConcurrencyLimitBreadthFirstScheduler(ConcurrencyLimitScheduler):
             while not stage.deliver_queue.empty() and quota > 0:
                 event = stage.deliver_queue.get()
                 t = tracker.Task(stage.lambda_function, stage.init_state, event, stage.emit,
-                                 stage.event, stage.config, regions=['us-east-1'])
+                                 stage.event, stage.config, regions=stage.region)
                 ret.append(t)
                 quota -= 1
         return ret

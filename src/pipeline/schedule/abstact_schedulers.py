@@ -56,7 +56,7 @@ class SchedulerBase(object):
             # it may increase overall latency by at most n*0.001 second, where n is the longest path in the pipeline
 
         logging.info('finish scheduling pipeline')
-
+        #tracker.Tracker.stop() # need fix
     @classmethod
     def submit_tasks(cls, pipeline, submitted):
         raise NotImplementedError()
