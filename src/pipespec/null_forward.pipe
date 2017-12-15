@@ -5,7 +5,7 @@
       "stage": "parallelize_link",
       "config": {
         "framesperchunk": "{fps}",
-        "chunklimit": 800
+        "chunklimit": 1400
       }
     },
     {
@@ -22,6 +22,18 @@
     },
         {
       "name": "null2",
+      "stage": "null",
+      "config": {
+      }
+    },
+    {
+      "name": "null3",
+      "stage": "null",
+      "config": {
+      }
+    },
+            {
+      "name": "null4",
       "stage": "null",
       "config": {
       }
@@ -46,8 +58,16 @@
       "src": "null1:chunked_link",
       "dst": "null2:chunked_link"
     },
-        {
+            {
       "src": "null2:chunked_link",
+      "dst": "null3:chunked_link"
+    },
+            {
+      "src": "null3:chunked_link",
+      "dst": "null4:chunked_link"
+    },
+        {
+      "src": "null4:chunked_link",
       "dst": "output_0:chunked_link"
     }
   ]

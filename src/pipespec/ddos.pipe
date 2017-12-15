@@ -1,0 +1,40 @@
+{
+  "nodes":[
+  {
+    "name": "parlink",
+      "stage": "parallelize_link",
+      "config": {
+        "framesperchunk": "{fps}/4",
+        "chunklimit": 1000,
+      },
+      "lambda_function": "lambda_test_JS2aw5Hx"
+  },
+  {
+    "name": "ddos",
+    "stage": "ddos",
+    "config": {
+      "duration": 10,
+      "nworkers": 4,
+      "nsockets": 4,
+      "outdir": "/tmp/out"
+    }
+  }    
+  ],
+
+  "streams":
+    [
+    {
+      "src": "input_0:video_link",
+      "dst": "parlink:video_link"
+    },
+    {
+      "src": "parlink:chunked_link",
+      "dst": "ddos:chunked_link"
+    },
+    {
+      "src": "ddos:chunked_link",
+      "dst": "output_0:chunked_link"
+    }
+    ]
+}
+
