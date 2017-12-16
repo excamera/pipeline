@@ -2,13 +2,15 @@
 import Queue
 import logging
 from copy import deepcopy
-
-import libmu
-from pipeline.config import settings
 import pdb
 import heapq
 import math
+import time
 from collections import OrderedDict
+
+import libmu
+import libmu.lightlog as lightlog
+from pipeline.config import settings
 
 def get_default_event():
     return {
@@ -22,7 +24,8 @@ def get_default_event():
         , 'lambda_function': settings['default_lambda_function']
     }
 
-def escape_for_csv(msg):
+def escape_for_csv(raw_msg):
+    msg = raw_msg[:10] # truncate
     # see https://stackoverflow.com/a/769675/2144939
     if ',' in msg:
         msg.replace('"', '""')
@@ -33,8 +36,10 @@ def default_trace_func(in_events, msg, op):
     """Log every command message sent/recv by the state machine.
     op includes send/recv/undo_recv/kick
     """
-    logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
-    logger.debug('%s, %s, %s', in_events.values()[0]['metadata']['lineage'], op, escape_for_csv(msg))
+    # logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
+    # logger.debug('%s, %s, %s', in_events.values()[0]['metadata']['lineage'], op, escape_for_csv(msg))
+    logger = lightlog.getLogger(in_events.values()[0]['metadata']['pipe_id'])
+    logger.debug('%f, %s, %s, %s' % (time.time(), in_events.values()[0]['metadata']['lineage'], op, escape_for_csv(msg)))
 
 def staged_trace_func(stage, num_frames,worker_called, in_events, msg, op):
     """Log every command message sent/recv by the state machine.

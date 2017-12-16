@@ -2,10 +2,14 @@ import os
 import json
 import logging
 import traceback
-
 import grpc
+import pdb
+import time
 from concurrent import futures
 
+import cProfile, pstats, StringIO
+
+import libmu.lightlog as lightlog
 import pipeline
 from pipeline.schedule import *
 from pipeline.service import pipeline_pb2
@@ -13,7 +17,6 @@ from pipeline.service import pipeline_pb2_grpc
 from pipeline.config import settings
 from pipeline.util.amend_mpd import amend_mpd
 from pipeline.util.media_probe import get_signed_URI
-import pdb
 
 _server = None
 
@@ -33,13 +36,18 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             pipe_dir = 'logs/' + pipe.pipe_id
             os.system('mkdir -p ' + pipe_dir)
 
-            handler = logging.FileHandler(pipe_dir + '/log.csv')
-            handler.setLevel(logging.DEBUG)
-            handler.setFormatter(logging.Formatter('%(created)f, %(message)s'))
-            logger = logging.getLogger(pipe.pipe_id)
-            logger.propagate = False
-            logger.setLevel(logging.DEBUG)
-            logger.addHandler(handler)
+            # handler = logging.FileHandler(pipe_dir + '/log.csv')
+            # handler.setLevel(logging.DEBUG)
+            # handler.setFormatter(logging.Formatter('%(created)f, %(message)s'))
+            #memhandler = logging.handlers.MemoryHandler(1024**2*10, target=handler)
+            #memhandler.shouldflush = lambda _: False
+
+            logger = lightlog.getLogger(pipe.pipe_id)
+            # logger = logging.getLogger(pipe.pipe_id)
+            # logger.propagate = False
+            # logger.setLevel(logging.DEBUG)
+            # logger.addHandler(memhandler)
+            # logger.addHandler(handler)
 
             conf_sched = settings.get('scheduler', 'SimpleScheduler')
             candidates = [s for s in dir(pipeline.schedule) if hasattr(vars(pipeline.schedule)[s], conf_sched)]
@@ -48,10 +56,15 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 raise ValueError("scheduler %s not found" % conf_sched)
             sched = getattr(vars(pipeline.schedule)[candidates[0]], conf_sched)  # only consider the first match
 
-            logger.info('starting pipeline')
+            logger.info(str(time.time())+', starting pipeline')
             sched.schedule(pipe)
-            logger.info('pipeline finished')
+            logger.info(str(time.time())+', pipeline finished')
 
+            with open(pipe_dir + '/log.csv', 'w') as f:
+                for l in logger.cached:
+                    f.write(l+'\n')
+
+            #memhandler.flush()
             result_queue = pipe.outputs.values()[0][1]  # there should be only one output queue
 
             num_m4s = 0
