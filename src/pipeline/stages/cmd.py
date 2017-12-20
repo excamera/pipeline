@@ -12,19 +12,26 @@ from pipeline.stages.util import default_trace_func, get_output_from_message
 class FinalState(FinalStateTemplate):
     pass
 
-class RunState(CommandListState):
+class EmitState(OnePassState):
     nextState = FinalState
+
+    def __init__(self, prevState):
+        super(EmitState, self).__init__(prevState)
+        key = self.in_events.keys()[0]
+        self.emit_event(key, self.in_events.values()[0])  # just forward whatever comes in
+        
+
+class RunState(CommandListState):
+    nextState = EmitState
     commandlist = [ (None, "run:{cmd}"), 
             ("OK:", "quit:")
                 ]
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
-        key = self.in_events.keys()[0]
 
         params = {'cmd': self.config['cmd']}
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
-        self.emit_event(key, self.in_events.values()[0])  # just forward whatever comes in
 
 
 class InitState(InitStateTemplate):
