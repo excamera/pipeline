@@ -25,7 +25,7 @@ def get_default_event():
     }
 
 def escape_for_csv(raw_msg):
-    msg = raw_msg[:10] # truncate
+    msg = raw_msg[:1000] # truncate
     # see https://stackoverflow.com/a/769675/2144939
     if ',' in msg:
         msg.replace('"', '""')
