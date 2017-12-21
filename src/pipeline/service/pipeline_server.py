@@ -104,6 +104,10 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 return pipeline_pb2.SubmitReply(success=False, error_msg='no output is found')
 
         except Exception as e:
+            if 'pipe_dir' in vars():
+                with open(pipe_dir + '/log.csv', 'w') as f:
+                    for l in logger.cached:
+                        f.write(l+'\n')
             return pipeline_pb2.SubmitReply(success=False, error_msg=traceback.format_exc())
 
 
