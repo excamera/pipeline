@@ -3,7 +3,7 @@ from collections import OrderedDict
 __all__ = ['plot_stack']
 
 
-def preprocess(lines, cmd_of_interest):
+def preprocess(lines, cmd_of_interest="", send_only=False):
     assert lines[0].split(',')[1].strip() == 'starting pipeline'
     assert lines[-1].split(',')[1].strip() == 'pipeline finished'
 
@@ -15,8 +15,7 @@ def preprocess(lines, cmd_of_interest):
         lineage = fields[1].strip()
         op = fields[2].strip()
         msg = fields[3].strip()
-        #if lineage == '0':
-        if lineage == '0' or op != 'send':
+        if lineage == '0' or (send_only and op != 'send'):
             continue
         if lineage not in data:
             data[lineage] = []
