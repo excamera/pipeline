@@ -60,6 +60,7 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             sched.schedule(pipe)
             logger.info(str(time.time())+', pipeline finished')
 
+            logging.info("pipeline: %s finished", pipe.pipe_id)
             with open(pipe_dir + '/log.csv', 'w') as f:
                 for l in logger.cached:
                     f.write(l+'\n')
