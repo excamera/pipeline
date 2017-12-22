@@ -9,9 +9,11 @@ from concurrent import futures
 
 import cProfile, pstats, StringIO
 
-import libmu.lightlog as lightlog
+from libmu import lightlog
+from libmu.tracker import Tracker
 import pipeline
 from pipeline.schedule import *
+from pipeline.schedule.abstact_schedulers import SchedulerBase
 from pipeline.service import pipeline_pb2
 from pipeline.service import pipeline_pb2_grpc
 from pipeline.config import settings
@@ -56,14 +58,13 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 raise ValueError("scheduler %s not found" % conf_sched)
             sched = getattr(vars(pipeline.schedule)[candidates[0]], conf_sched)  # only consider the first match
 
-            logger.info(str(time.time())+', starting pipeline')
+            logger.info(ts=time.time(), msg='start pipeline')
             sched.schedule(pipe)
-            logger.info(str(time.time())+', pipeline finished')
+            logger.info(ts=time.time(), msg='finish pipeline')
 
             logging.info("pipeline: %s finished", pipe.pipe_id)
-            with open(pipe_dir + '/log.csv', 'w') as f:
-                for l in logger.cached:
-                    f.write(l+'\n')
+            with open(pipe_dir + '/log_pb', 'wb') as f:
+                f.write(logger.serialize())
 
             #memhandler.flush()
             result_queue = pipe.outputs.values()[0][1]  # there should be only one output queue
@@ -105,10 +106,10 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 return pipeline_pb2.SubmitReply(success=False, error_msg='no output is found')
 
         except Exception as e:
+            logging.error(traceback.format_exc())
             if 'pipe_dir' in vars():
-                with open(pipe_dir + '/log.csv', 'w') as f:
-                    for l in logger.cached:
-                        f.write(l+'\n')
+                with open(pipe_dir + '/log_pb', 'wb') as f:
+                    f.write(logger.serialize())
             return pipeline_pb2.SubmitReply(success=False, error_msg=traceback.format_exc())
 
 
@@ -122,4 +123,7 @@ def serve():
 
 def stop(val):
     global _server
+    SchedulerBase.stop()
+    Tracker.stop()
+    time.sleep(1)
     _server.stop(val)

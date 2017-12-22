@@ -15,12 +15,13 @@ import pdb
 
 
 class SchedulerBase(object):
+    should_stop = False
     @classmethod
     def schedule(cls, pipeline):
         logging.info('start scheduling pipeline: %s', pipeline.pipe_id)
         last_print = 0
         tasks = []
-        while True:
+        while not cls.should_stop:
             buffer_empty = True
             deliver_empty = True
             for key, stage in pipeline.stages.iteritems():
@@ -56,10 +57,14 @@ class SchedulerBase(object):
             # it may increase overall latency by at most n*0.001 second, where n is the longest path in the pipeline
 
         logging.info('finish scheduling pipeline')
-        #tracker.Tracker.stop() # need fix
+
     @classmethod
     def submit_tasks(cls, pipeline, submitted):
         raise NotImplementedError()
+
+    @classmethod
+    def stop(cls):
+        cls.should_stop = True
 
 
 class ThrottledScheduler(SchedulerBase):

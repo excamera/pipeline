@@ -24,8 +24,7 @@ def get_default_event():
         , 'lambda_function': settings['default_lambda_function']
     }
 
-def escape_for_csv(raw_msg):
-    msg = raw_msg[:1000] # truncate
+def escape_for_csv(msg):
     # see https://stackoverflow.com/a/769675/2144939
     if ',' in msg:
         msg.replace('"', '""')
@@ -39,15 +38,14 @@ def default_trace_func(in_events, msg, op):
     # logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
     # logger.debug('%s, %s, %s', in_events.values()[0]['metadata']['lineage'], op, escape_for_csv(msg))
     logger = lightlog.getLogger(in_events.values()[0]['metadata']['pipe_id'])
-    logger.debug('%f, %s, %s, %s' % (time.time(), in_events.values()[0]['metadata']['lineage'], op, escape_for_csv(msg)))
+    logger.debug(ts=time.time(), lineage=in_events.values()[0]['metadata']['lineage'], op=op, msg=msg)
 
-def staged_trace_func(stage, num_frames,worker_called, in_events, msg, op):
+def staged_trace_func(stage, num_frames, worker_called, in_events, msg, op):
     """Log every command message sent/recv by the state machine.
     op includes send/recv/undo_recv/kick
     """
-    logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
-    logger.debug('%s, %s, %s, %s, %s, %s', stage, num_frames,worker_called, in_events.values()[0]['metadata']['lineage'], op, \
-            escape_for_csv(msg))
+    logger = lightlog.getLogger(in_events.values()[0]['metadata']['pipe_id'])
+    logger.debug(stage=stage, num_frames=num_frames, worker_called=worker_called, lineage=in_events.values()[0]['metadata']['lineage'], op=op, msg=msg)
 
 def default_deliver_func(buffer_queues, deliver_queue, **kwargs):
     """deliver every event to deliver_queue from buffer_queue
