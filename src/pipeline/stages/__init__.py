@@ -33,6 +33,7 @@ class InitStateTemplate(CommandListState):
     extra = "(init)"
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
                   # , "run:rm -rf /tmp/*"
+                  , "seti:threadpool_s3:1"
                   , "run:mkdir -p ##TMPDIR##"
                   , None
                   ]
