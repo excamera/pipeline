@@ -12,10 +12,10 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../../external/
 import joblog_pb2
 
 fields = ('ts', 'lineage', 'op', 'msg', 'stage', 'worker_called', 'num_frames')
-cmds = ('seti', 'invocation', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl', 'run:tar')
+cmds = ('sleep', 'seti', 'invocation', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl', 'run:tar', 'lambda')
 
 def plot_stack(lines, chunk_length=None, ystart=None):
-    data = preprocess(lines, cmd_of_interest=cmds, send_only=True) # empty string cmd_of_interest means all cmds
+    data = preprocess(lines, cmd_of_interest="", send_only=True) # empty string cmd_of_interest means all cmds
     values = data.values()
     for j in reversed(xrange(0, len(values[0]))):
         ts = [r[j]['ts'] for r in values]
