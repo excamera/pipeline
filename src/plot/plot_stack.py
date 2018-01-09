@@ -6,13 +6,10 @@ import re
 
 import matplotlib.pyplot as plt
 
-from util import preprocess
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../../external/mu/src/lambdaize/libmu/')
+from util import preprocess, read_records
 
-import joblog_pb2
-
-fields = ('ts', 'lineage', 'op', 'msg', 'stage', 'worker_called', 'num_frames')
 cmds = ('sleep', 'seti', 'invocation', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl', 'run:tar', 'lambda')
+
 
 def plot_stack(lines, chunk_length=None, ystart=None):
     data = preprocess(lines, cmd_of_interest="", send_only=True) # empty string cmd_of_interest means all cmds
@@ -53,33 +50,7 @@ if __name__ == '__main__':
         print('usage: %s log_file [chunk_length [start_playing_time]]' % sys.argv[0], file=sys.stderr)
         sys.exit(1)
     
-    if sys.argv[1].endswith('.csv'):
-        with open(sys.argv[1], 'r') as f:
-
-            def define_fields(line):
-                fields = line.split(', ')
-                if len(fields) == 2:
-                    return {'ts': float(fields[0]), 'msg': fields[1]}
-                elif len(fields) >= 4:
-                    return {'ts': float(fields[0]), 'lineage': fields[1], 'op': fields[2], 'msg': ', '.join(fields[3:])}
-                else:
-                    raise Exception('undefined fields: %s' % line)
-
-            lines = [define_fields(l.strip()) for l in f.readlines()]
-    else:
-        with open(sys.argv[1], 'rb') as f:
-            jl = joblog_pb2.JobLog()
-            jl.ParseFromString(f.read())
-
-            def define_fields(line):
-                ret = {}
-                for a in fields:
-                    if hasattr(line, a):
-                        ret[a] = getattr(line, a)
-                return ret
-
-            lines = [define_fields(l) for l in jl.record]
-            
+    lines = read_records(sys.argv[1])
     chunk_length = None
     ystart = None
     if len(sys.argv) >= 3:
@@ -88,4 +59,3 @@ if __name__ == '__main__':
         ystart = float(sys.argv[3])
 
     plot_stack(lines, chunk_length, ystart)
-

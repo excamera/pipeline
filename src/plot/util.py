@@ -1,6 +1,42 @@
+import os
+import sys
 from collections import OrderedDict
 
-__all__ = ['plot_stack']
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../../external/mu/src/lambdaize/libmu/')
+
+import joblog_pb2
+
+fields = ('ts', 'lineage', 'op', 'msg', 'stage', 'worker_called', 'num_frames')
+
+
+def read_records(input_file):
+    if input_file.endswith('.csv'):
+        with open(input_file, 'r') as f:
+
+            def define_fields(line):
+                fields = line.split(', ')
+                if len(fields) == 2:
+                    return {'ts': float(fields[0]), 'msg': fields[1]}
+                elif len(fields) >= 4:
+                    return {'ts': float(fields[0]), 'lineage': fields[1], 'op': fields[2], 'msg': ', '.join(fields[3:])}
+                else:
+                    raise Exception('undefined fields: %s' % line)
+
+            records = [define_fields(l.strip()) for l in f.readlines()]
+    else:
+        with open(input_file, 'rb') as f:
+            jl = joblog_pb2.JobLog()
+            jl.ParseFromString(f.read())
+
+            def define_fields(line):
+                ret = {}
+                for a in fields:
+                    if hasattr(line, a):
+                        ret[a] = getattr(line, a)
+                return ret
+
+            records = [define_fields(l) for l in jl.record]
+    return records
 
 
 def preprocess(lines, cmd_of_interest="", send_only=False):
