@@ -1,5 +1,6 @@
 import os
 import sys
+import pdb
 from collections import OrderedDict
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__))+'/../../external/mu/src/lambdaize/libmu/')
@@ -39,49 +40,39 @@ def read_records(input_file):
     return records
 
 
-def preprocess(lines, cmd_of_interest="", send_only=False):
-    assert lines[0]['msg'] == 'starting pipeline' or lines[0]['msg'] == 'start pipeline' 
-    assert lines[-1]['msg'] == 'pipeline finished' or lines[-1]['msg'] == 'finish pipeline' 
+def preprocess(records, cmd_of_interest="", send_only=False):
+    assert records[0]['msg'] == 'starting pipeline' or records[0]['msg'] == 'start pipeline'
+    assert records[-1]['msg'] == 'pipeline finished' or records[-1]['msg'] == 'finish pipeline'
 
-    start_ts = lines[0]['ts']
-    data = OrderedDict()
-    for i in xrange(1, len(lines)-1):  # first, last lines excluded
-        l = lines[i]
+    start_ts = records[0]['ts']
+    lineages = OrderedDict()
+    for i in xrange(1, len(records)-1):  # first, last records excluded
+        l = records[i]
         if l['lineage'] == '0' or (send_only and l['op'] != 'send'):
             continue
-        if l['lineage'] not in data:
-            data[l['lineage']] = []
+        if l['lineage'] not in lineages:
+            lineages[l['lineage']] = []
         if l['msg'].startswith(cmd_of_interest):
             l['ts'] = l['ts']-start_ts # relative timestamp
-            data[l['lineage']].append(l)
+            lineages[l['lineage']].append(l)
 
-    return data
+    return lineages
 
 
-#def precise_time(lines, cmd_of_interest):
-#    """
-#        assumption: recv msg is right after the corresponding send msg (for the same lineage)
-#    """
-#    assert lines[0].split(',')[1].strip() == 'starting pipeline'
-#    assert lines[-1].split(',')[1].strip() == 'pipeline finished'
-#
-#    data = dict()
-#    current = dict()
-#    for i in xrange(1, len(lines)-1):  # first, last lines excluded
-#        fields = lines[i].split(',', 4)
-#        ts = float(fields[0].strip())
-#        lineage = fields[1].strip()
-#        op = fields[2].strip()
-#        msg = fields[3].strip()
-#        if lineage == '0':
-#            continue
-#        if lineage in current:
-#            start_record = current.pop(lineage)
-#            lineage_records = data.get(lineage, [])
-#            lineage_records.append({'msg': start_record['msg'][:10], 'duration': ts - start_record['ts']})
-#            data[lineage] = lineage_records
-#            continue
-#        if op == 'send' and msg.startswith(cmd_of_interest):
-#            current[lineage] = {'ts': ts, 'msg': msg}
-#
-#    return data  # not ordered
+def get_intervals(lineages, start_filter, end_filter):
+    intervals = {}
+    for lineage, recs in lineages.iteritems():
+        start_points = [r for r in recs if start_filter(lineage, r)]
+        end_points = [r for r in recs if end_filter(lineage, r)]
+        if len(start_points) != 1:
+            pass
+            # raise Exception('found %d start points: %s' % (len(start_points), start_points))
+        elif len(end_points) != 1:
+            pass
+            # raise Exception('found %d end points: %s' % (len(end_points), end_points))
+        elif start_points[0]['ts'] > end_points[0]['ts']:
+            raise Exception('start point later than end point')
+        else:
+            intervals[lineage] = end_points[0]['ts'] - start_points[0]['ts']
+
+    return intervals
