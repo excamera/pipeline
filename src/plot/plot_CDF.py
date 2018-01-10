@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 from util import read_records, preprocess, get_intervals
 
 
-def plot_CDF(filename, start_keyword, end_keyword):
+def plot_CDF(filename, start_selector, end_selector):
     records = read_records(filename)
     lineages = preprocess(records)
-    intervals = get_intervals(lineages, lambda _, r: start_keyword in r['msg'], lambda _, r: end_keyword in r['msg'])
+    intervals = get_intervals(lineages, start_selector, end_selector)
 
     sortedtime = np.sort(intervals.values())
     p = 1. * np.arange(len(intervals.values())) / (len(intervals.values()) - 1)
@@ -21,5 +21,4 @@ if __name__ == '__main__':
     if len(sys.argv) != 3:
         print('usage: %s log_file start_keyword end_keyword' % sys.argv[0], file=sys.stderr)
         sys.exit(1)
-
-    plot_CDF(*sys.argv)
+    plot_CDF(sys.argv, lambda _, r: sys.argv[1] in r['msg'], lambda _, r: sys.argv[2] in r['msg'])
