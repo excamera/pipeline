@@ -86,3 +86,8 @@ class EncodeState(CommandListState):
 
 class InitState(InitStateTemplate):
     nextState = EncodeState
+
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='encode')
+

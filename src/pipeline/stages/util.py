@@ -31,14 +31,14 @@ def escape_for_csv(msg):
         msg = '"' + msg + '"'
     return msg.replace('\n', '\\n')
 
-def default_trace_func(in_events, msg, op):
+def default_trace_func(in_events, msg, op, **kwargs):
     """Log every command message sent/recv by the state machine.
     op includes send/recv/undo_recv/kick
     """
     # logger = logging.getLogger(in_events.values()[0]['metadata']['pipe_id'])
     # logger.debug('%s, %s, %s', in_events.values()[0]['metadata']['lineage'], op, escape_for_csv(msg))
     logger = lightlog.getLogger(in_events.values()[0]['metadata']['pipe_id'])
-    logger.debug(ts=time.time(), lineage=in_events.values()[0]['metadata']['lineage'], op=op, msg=msg)
+    logger.debug(ts=time.time(), lineage=in_events.values()[0]['metadata']['lineage'], op=op, msg=msg, **kwargs)
 
 def staged_trace_func(stage, num_frames, worker_called, in_events, msg, op):
     """Log every command message sent/recv by the state machine.

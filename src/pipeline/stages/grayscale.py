@@ -47,3 +47,7 @@ class RunState(CommandListState):
 
 class InitState(InitStateTemplate):
     nextState = RunState
+
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='grayscale')
