@@ -12,11 +12,11 @@ cmds = ('sleep', 'seti', 'invocation', 'request', 'run:./ffmpeg', 'emit', 'quit'
 
 
 def plot_stack(lines, chunk_length=None, ystart=None):
-    data = preprocess(lines, cmd_of_interest="", send_only=True) # empty string cmd_of_interest means all cmds
+    data = preprocess(lines, cmd_of_interest="", send_only=False) # empty string cmd_of_interest means all cmds
     values = data.values()
     for j in reversed(xrange(0, len(values[0]))):
         ts = [r[j]['ts'] for r in values]
-        label = values[0][j-1]['msg'][:10]
+        label = values[0][j-1]['stage'][:6]+':'+values[0][j-1]['msg'][:10]
         if chunk_length:
             xscale = [chunk_length * x for x in xrange(1, len(data)+1)]
         else:
@@ -28,7 +28,8 @@ def plot_stack(lines, chunk_length=None, ystart=None):
             drawn_line = plt.stackplot(xscale, ts)
             drawn_line[0].set_label(label)
 
-    plt.legend(loc='best')
+    plt.legend(loc='best', ncol=2, prop={'size': 6})
+    #plt.legend()
     plt.grid(b=True, axis='y')
     plt.ylabel('process time (s)')
     if chunk_length:

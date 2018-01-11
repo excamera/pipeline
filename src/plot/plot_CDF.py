@@ -8,7 +8,7 @@ from util import read_records, preprocess, get_intervals
 
 def plot_CDF(filename, start_selector, end_selector):
     records = read_records(filename)
-    lineages = preprocess(records)
+    lineages = preprocess(records, cmd_of_interest='', send_only=False)
     intervals = get_intervals(lineages, start_selector, end_selector)
 
     sortedtime = np.sort(intervals.values())

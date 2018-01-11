@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 import pdb
@@ -59,17 +60,16 @@ def preprocess(records, cmd_of_interest="", send_only=False):
     return lineages
 
 
-def get_intervals(lineages, start_filter, end_filter):
+def get_intervals(lineages, start_selector, end_selector):
     intervals = {}
     for lineage, recs in lineages.iteritems():
-        start_points = [r for r in recs if start_filter(lineage, r)]
-        end_points = [r for r in recs if end_filter(lineage, r)]
+        start_points = [r for r in recs if start_selector(lineage, r)]
+        end_points = [r for r in recs if end_selector(lineage, r)]
         if len(start_points) != 1:
-            pass
-            # raise Exception('found %d start points: %s' % (len(start_points), start_points))
+            print('found %d start points: %s' % (len(start_points), start_points), file=sys.stderr)
         elif len(end_points) != 1:
             pass
-            # raise Exception('found %d end points: %s' % (len(end_points), end_points))
+            print('found %d end points: %s' % (len(end_points), end_points), file=sys.stderr)
         elif start_points[0]['ts'] > end_points[0]['ts']:
             raise Exception('start point later than end point')
         else:
