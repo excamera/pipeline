@@ -30,7 +30,7 @@ class RunState(CommandListState):
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
                   , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
-                  , ('OK:RETVAL(0)', 'run:./ffmpeg -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
+                  , ('OK:RETVAL(0)', 'run:time ./ffmpeg -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
                                      '-vf hue=s=0 -c:a copy -safe 0 -start_number 1 ##TMPDIR##/out_0/%08d.png')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)
@@ -38,7 +38,7 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
-        self.local['out_key'] = settings['storage_base']+self.in_events['frames']['metadata']['pipe_id']+'/grayscale/'+libmu.util.rand_str(16)+'/'
+        self.local['out_key'] = settings['storage_base'] + libmu.util.rand_str(16)+'/'
 
         params = {'in_key': self.in_events['frames']['key'], 'out_key': self.local['out_key']}
         logging.debug('params: '+str(params))

@@ -5,7 +5,7 @@
       "stage": "parallelize_link",
       "config": {
         "framesperchunk": "{fps}",
-        "filter": "[fps>=30]"
+        "filter": "[fps>=24]"
       }
     },
     {

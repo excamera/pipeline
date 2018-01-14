@@ -1,62 +1,104 @@
 #!/usr/bin/python
+# coding=utf-8
 import logging
 
 import libmu.util
-from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
+from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from pipeline.config import settings
-from pipeline.stages.util import default_trace_func
+from pipeline.stages import InitStateTemplate
+from pipeline.stages.util import default_trace_func, get_output_from_message
 
 
-class FinalState(TerminalState):
-    extra = "(finished)"
-
-
-class EmitState(CommandListState):
-    extra = "(emit output)"
-    nextState = FinalState
-    commandlist = [ (None, "quit:")
-                  ]
+class FinalState(OnePassState):
+    extra = "(sending quit)"
+    expect = None
+    command = "quit:"
+    nextState = TerminalState
 
     def __init__(self, prevState):
-        super(EmitState, self).__init__(prevState, trace_func=default_trace_func)
-        emit = prevState.emit
-        out_key = prevState.out_key
-
-        emit('frames', {'metadata': self.in_events['chunks']['metadata'], 'key': out_key})
+        super(FinalState, self).__init__(prevState)
 
 
+class ConfirmEmitState(OnePassState):
+    extra = "(confirm emit)"
+    expect = 'OK:EMIT'
+    command = None
+    nextState = FinalState
+
+    def __init__(self, prevState):
+        super(ConfirmEmitState, self).__init__(prevState)
+
+    def post_transition(self):
+        self.emit_event('frames', {'metadata': self.in_events['chunks']['metadata'], 'key': self.local['out_key']
+            , 'nframes': self.local['output_count']})
+
+        #for smart serialization
+        lineage = self.in_events['chunks']['metadata']['lineage']
+        self.pipe['frames_per_worker'] = self.pipe.get('frames_per_worker', {})
+        self.pipe['frames_per_worker'][lineage] = self.local['output_count']
+        return self.nextState(self)  # don't forget this
+
+
+class TryEmitState(OnePassState):
+    extra = "(emit output)"
+    expect = None
+    command = 'emit:##TMPDIR##/out_0 {out_key}'
+    nextState = ConfirmEmitState
+
+    def __init__(self, prevState):
+        super(TryEmitState, self).__init__(prevState)
+        params = {'out_key': self.local['out_key']}
+        self.command = self.command.format(**params)
+
+
+class CheckOutputState(IfElseState):
+    extra = "(check output)"
+    expect = 'OK:RETVAL('
+    consequentState = TryEmitState
+    alternativeState = FinalState
+
+    def testfn(self):
+        self.local['output_count'] = int(get_output_from_message(self.messages[-1]))
+        return self.local['output_count'] > 0
+
+    def __init__(self, prevState):
+        super(CheckOutputState, self).__init__(prevState)
+
+class GetFramerateState(OnePassState):
+    nextState = CheckOutputState
+    expect = 'OK:RETVAL(0)'
+    command = 'run:find ##TMPDIR##/out_0/ -name "*png" | wc -l'
+
+    def __init__(self, prevState):
+        super(GetFramerateState, self).__init__(prevState)
+
+    def post_transition(self):
+        output = get_output_from_message(self.messages[-1])
+        field = filter(lambda s: 'fps' in s, output.split(','))[0]
+        self.in_events['chunks']['metadata']['fps'] = float(field.split()[0])
+        return self.nextState(self)  # don't forget this
+        
 class RunState(CommandListState):
     extra = "(run)"
-    nextState = EmitState
+    nextState = GetFramerateState
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/ ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'collect:{key} ##TMPDIR##/in_0')
-                  , ('OK:RETVAL(0)', 'run:./ffmpeg -y -i `find ##TMPDIR##/in_0/ -name "*.mp4"` -f image2 -c:v png '
-                                    '-start_number 1 ##TMPDIR##/out_0/%08d.png')
-                  , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
-                  , ('OK:EMIT', None)
+                  , ('OK:COLLECT', 'run:./ffmpeg -y -i `find ##TMPDIR##/in_0/ -name "*.mp4"` -f image2 -c:v png '
+                                    '-start_number 1 ##TMPDIR##/out_0/%08d.png 2>&1|grep fps|head -n1')
                     ]
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState, trace_func=default_trace_func)
-        self.emit = prevState.emit
-        self.out_key = prevState.out_key
+        self.local['out_key'] = settings['storage_base'] + libmu.util.rand_str(16) + '/'
 
-        params = {'key': self.in_events['chunks']['key'], 'out_key': self.out_key}
+        params = {'key': self.in_events['chunks']['key'], 'out_key': self.local['out_key']}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
 
-class InitState(CommandListState):
-    extra = "(init)"
+class InitState(InitStateTemplate):
     nextState = RunState
-    commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  , "run:rm -rf /tmp/*"
-                  , "run:mkdir -p ##TMPDIR##"
-                  , None
-                  ]
 
-    def __init__(self, prevState, in_events, emit):
-        super(InitState, self).__init__(prevState, in_events=in_events, trace_func=default_trace_func)
-        self.emit = emit
-        self.out_key = settings['storage_base']+in_events['chunks']['metadata']['pipe_id']+'/decode/'+libmu.util.rand_str(16)+'/'
-        logging.debug('in_events: '+str(in_events)+', emit: '+str(emit))
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='decode')
