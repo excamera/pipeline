@@ -29,11 +29,12 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
         try:
             pipe = pipeline.create_from_spec(json.loads(request.pipeline_spec))
 
-            for index in range(len(request.inputs)):
-                in_event = {'key': request.inputs[index].value,
-                            'metadata': {'pipe_id': pipe.pipe_id, 'lineage': '0'}}
-                pipe.inputs['input_' + str(index)][1].put({request.inputs[index].type: in_event})
-                # put events to the buffer queue of all input stages
+            for instream in request.inputstreams:
+                for input in instream.inputs:
+                    in_event = {'key': input.uri,
+                                'metadata': {'pipe_id': pipe.pipe_id, 'lineage': input.lineage}}
+                    pipe.inputs[instream.name][1].put({instream.type: in_event})
+                    # put events to the buffer queue of all input stages
 
             pipe_dir = 'logs/' + pipe.pipe_id
             os.system('mkdir -p ' + pipe_dir)

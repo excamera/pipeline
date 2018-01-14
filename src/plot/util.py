@@ -49,7 +49,7 @@ def preprocess(records, cmd_of_interest="", send_only=False):
     lineages = OrderedDict()
     for i in xrange(1, len(records)-1):  # first, last records excluded
         l = records[i]
-        if l['lineage'] == '0' or (send_only and l['op'] != 'send'):
+        if l['lineage'] == '0' or l['lineage'] == '' or (send_only and l['op'] != 'send'):
             continue
         if l['lineage'] not in lineages:
             lineages[l['lineage']] = []
