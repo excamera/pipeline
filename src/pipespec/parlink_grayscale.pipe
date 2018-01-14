@@ -1,8 +1,16 @@
 {
   "nodes":[
     {
+      "name": "parlink",
+      "stage": "parallelize_link",
+      "config": {
+        "framesperchunk": "{fps}",
+        "filter": "[fps>=24]"
+      }
+    },
+    {
       "name": "decode",
-      "stage": "decode",
+      "stage": "decode_from_chunked_link",
       "config": {
       }
     },
@@ -23,8 +31,12 @@
   "streams":
   [
     {
-      "src": "input_0:chunks",
-      "dst": "decode:chunks"
+      "src": "input_0:video_link",
+      "dst": "parlink:video_link"
+    },
+    {
+      "src": "parlink:chunked_link",
+      "dst": "decode:chunked_link"
     },
     {
       "src": "decode:frames",
