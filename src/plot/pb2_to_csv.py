@@ -28,7 +28,4 @@ if __name__ == '__main__':
                 return ret
 
             for l in jl.record:
-                fout.write(', '.join([str(f) for f in define_fields(l)])+'\n')
-            
-            
-
+                fout.write(', '.join([f.encode('utf-8') if isinstance(f, unicode) else str(f) for f in define_fields(l)])+'\n')
