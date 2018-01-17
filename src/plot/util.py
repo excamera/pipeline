@@ -60,19 +60,28 @@ def preprocess(records, cmd_of_interest="", send_only=False):
     return lineages
 
 
-def get_intervals(lineages, start_selector, end_selector):
+def get_intervals(lineages, start_selector, end_selector, start_index=None, end_index=None):
     intervals = {}
     for lineage, recs in lineages.iteritems():
         start_points = [r for r in recs if start_selector(lineage, r)]
         end_points = [r for r in recs if end_selector(lineage, r)]
-        if len(start_points) != 1:
-            print('found %d start points: %s' % (len(start_points), start_points), file=sys.stderr)
-        elif len(end_points) != 1:
-            pass
-            print('found %d end points: %s' % (len(end_points), end_points), file=sys.stderr)
-        elif start_points[0]['ts'] > end_points[0]['ts']:
-            raise Exception('start point later than end point')
+
+        if len(start_points) >= 1 and len(end_points) >= 1:
+            if len(start_points) > 1 and not start_index:
+                start_index = 0
+                print('found %d start points: %s without given an index, choosing the first' % (len(start_points), start_points), file=sys.stderr)
+            if len(end_points) > 1 and not end_index:
+                end_index = 0
+                print('found %d end points: %s without given an index, choosing the first' % (len(end_points), end_points), file=sys.stderr)
+            start_index = start_index if start_index else 0
+            end_index = end_index if start_index else 0
+
+            if start_points[start_index]['ts'] > end_points[end_index]['ts']:
+                raise Exception('start point later than end point')
+            else:
+                intervals[lineage] = end_points[end_index]['ts'] - start_points[start_index]['ts']
+
         else:
-            intervals[lineage] = end_points[0]['ts'] - start_points[0]['ts']
+            print('not enough points found', file=sys.stderr)
 
     return intervals

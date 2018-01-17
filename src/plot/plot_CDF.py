@@ -14,7 +14,6 @@ def plot_CDF(filename, start_selector, end_selector):
     sortedtime = np.sort(intervals.values())
     p = 1. * np.arange(len(intervals.values())) / (len(intervals.values()) - 1)
     plt.plot(sortedtime, p)
-    plt.show()
 
 
 if __name__ == '__main__':
@@ -22,3 +21,5 @@ if __name__ == '__main__':
         print('usage: %s log_file start_keyword end_keyword' % sys.argv[0], file=sys.stderr)
         sys.exit(1)
     plot_CDF(sys.argv, lambda _, r: sys.argv[1] in r['msg'], lambda _, r: sys.argv[2] in r['msg'])
+    plt.grid(which='both')
+    plt.show()

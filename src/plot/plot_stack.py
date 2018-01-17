@@ -37,13 +37,12 @@ def plot_stack(lines, chunk_length=None, ystart=None):
     else:
         plt.xlabel('lineage number')
     new_axis = plt.axis()
-    plt.axis((new_axis[0], new_axis[1]*1.1, new_axis[2], new_axis[3]))
+    plt.axis((new_axis[0], new_axis[1]*1.15, new_axis[2], new_axis[3]))
     if ystart is not None:
         length = 180
         xstart = 1
         plt.plot([xstart, xstart+length], [ystart, ystart+length], color='k', linestyle='-', linewidth=2)
 
-    plt.show()
 
 
 if __name__ == '__main__':
@@ -60,3 +59,4 @@ if __name__ == '__main__':
         ystart = float(sys.argv[3])
 
     plot_stack(lines, chunk_length, ystart)
+    plt.show()
