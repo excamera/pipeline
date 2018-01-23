@@ -46,6 +46,7 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
             #memhandler.shouldflush = lambda _: False
 
             logger = lightlog.getLogger(pipe.pipe_id)
+            logger.add_metadata(str(settings))
             # logger = logging.getLogger(pipe.pipe_id)
             # logger.propagate = False
             # logger.setLevel(logging.DEBUG)
