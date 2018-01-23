@@ -26,6 +26,7 @@ if __name__ == '__main__':
                     if hasattr(line, a):
                         ret.append(getattr(line, a))
                 return ret
-
+            with open(sys.argv[1]+'_meta', 'w+') as meta:
+                meta.write(jl.metadata)
             for l in jl.record:
                 fout.write(', '.join([f.encode('utf-8') if isinstance(f, unicode) else str(f) for f in define_fields(l)])+'\n')
