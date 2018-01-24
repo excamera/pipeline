@@ -14,9 +14,16 @@ cmds = ('sleep', 'seti', 'invocation', 'request', 'run:./ffmpeg', 'emit', 'quit'
 def plot_stack(lines, chunk_length=None, ystart=None):
     data = preprocess(lines, cmd_of_interest="", send_only=False) # empty string cmd_of_interest means all cmds
     values = data.values()
-    for j in reversed(xrange(0, len(values[0]))):
-        ts = [r[j]['ts'] for r in values]
-        label = values[0][j-1]['stage'][:6]+':'+values[0][j-1]['msg'][:10]
+    lengths = [len(r) for r in values]
+    common_len = max(set(lengths), key=lengths.count)
+    valid_values = [v for v in values if len(v)==common_len]
+    invalid_values = [v for v in values if len(v)!=common_len]
+    if len(invalid_values) > 0:
+        print('%d lineages have uncommon # of messages: %s...' % (len(invalid_values), invalid_values[0]), file=sys.stderr)
+    padded_values = [v if len(v) == common_len else [{'ts':0.0}]*common_len for v in values]
+    for j in reversed(xrange(0, common_len)):
+        ts = [r[j]['ts'] for r in padded_values]
+        label = valid_values[0][j-1]['stage'][:6]+':'+valid_values[0][j-1]['msg'][:10]
         if chunk_length:
             xscale = [chunk_length * x for x in xrange(1, len(data)+1)]
         else:
