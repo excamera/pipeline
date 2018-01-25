@@ -78,7 +78,10 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
-        self.local['out_key'] = settings['storage_base'] + libmu.util.rand_str(16) + '/'
+        if settings.get('hash_bucket'):
+            self.local['out_key'] = settings['temp_storage_base'] + libmu.util.rand_str(1) + '/' + libmu.util.rand_str(16) + '/'
+        else:
+            self.local['out_key'] = settings['storage_base'] + libmu.util.rand_str(16) + '/'
 
         params = {'starttime': self.in_events['chunked_link']['starttime'],
                   'frames': self.in_events['chunked_link']['frames'],

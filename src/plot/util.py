@@ -60,7 +60,7 @@ def preprocess(records, cmd_of_interest="", send_only=False):
     return lineages
 
 
-def get_intervals(lineages, start_selector, end_selector, start_index=None, end_index=None):
+def get_intervals(lineages, start_selector, end_selector, start_index=None, end_index=None, **kwargs):
     intervals = {}
     for lineage, recs in lineages.iteritems():
         start_points = [r for r in recs if start_selector(lineage, r)]
