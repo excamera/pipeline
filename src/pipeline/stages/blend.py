@@ -3,6 +3,7 @@ import logging
 import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
 from pipeline.config import settings
+from pipeline.stages import InitStateTemplate
 from pipeline.stages.util import default_trace_func
 
 
@@ -35,6 +36,10 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
+        if settings.get('hash_bucket'):
+            self.local['out_key'] = settings['temp_storage_base'] + libmu.util.rand_str(1) + '/' + libmu.util.rand_str(16) + '/'
+        else:
+            self.local['out_key'] = settings['storage_base'] + libmu.util.rand_str(16) + '/'
 
         params = {'in_key_0': self.in_events['frames_0']['key'], 'in_key_1': self.in_events['frames_1']['key'],
                   'out_key': self.local['out_key']}
@@ -42,17 +47,9 @@ class RunState(CommandListState):
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
 
-class InitState(CommandListState):
-    extra = "(init)"
+class InitState(InitStateTemplate):
     nextState = RunState
-    commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  , "run:rm -rf /tmp/*"
-                  , "run:mkdir -p ##TMPDIR##"
-                  , None
-                  ]
 
-    def __init__(self, prevState, in_events, emit, config):
-        super(InitState, self).__init__(prevState, emit_event=emit, in_events=in_events, config=config, trace_func=default_trace_func)
-        self.emit = emit
-        self.local['out_key'] = settings['storage_base']+in_events['frames_0']['metadata']['pipe_id']+'/blend/'+libmu.util.rand_str(16)+'/'
-        logging.debug('in_events: '+str(in_events))
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='blend')
