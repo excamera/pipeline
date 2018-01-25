@@ -1,0 +1,62 @@
+{
+  "nodes":[
+    {
+      "name": "decode",
+      "stage": "decode",
+      "config": {
+      }
+    },
+    {
+      "name": "grayscale",
+      "stage": "grayscale",
+      "config": {
+      }
+    },
+    {
+      "name": "rotate",
+      "stage": "rotate",
+      "config": {
+      }
+    },
+    {
+      "name": "pixscale",
+      "stage": "pixscale",
+      "config": {
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_to_dash",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:chunks",
+      "dst": "decode:chunks"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "grayscale:frames"
+    },
+    {
+      "src": "grayscale:frames",
+      "dst": "rotate:frames"
+    },
+    {
+      "src": "rotate:frames",
+      "dst": "pixscale:frames"
+    },
+    {
+      "src": "pixscale:frames",
+      "dst": "encode:frames"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}
