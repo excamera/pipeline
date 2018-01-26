@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 from util import read_records, preprocess, get_intervals
 
 
-def plot_CDF(filename, start_selector, end_selector, **kwargs):
+def plot_CDF(filename, start_selector, end_selector, start_index=None, end_index=None, **kwargs):
     records = read_records(filename)
     lineages = preprocess(records, cmd_of_interest='', send_only=False)
-    intervals = get_intervals(lineages, start_selector, end_selector, **kwargs)
+    intervals = get_intervals(lineages, start_selector, end_selector, start_index=start_index, end_index=end_index, **kwargs)
 
     sortedtime = np.sort(intervals.values())
     p = 1. * np.arange(len(intervals.values())) / (len(intervals.values()) - 1)
