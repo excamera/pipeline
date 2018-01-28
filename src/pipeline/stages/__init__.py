@@ -33,8 +33,8 @@ class Event(object):
 class InitStateTemplate(CommandListState):
     extra = "(init)"
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  # , "run:rm -rf /tmp/*"
                   , "seti:threadpool_s3:%d" % settings.get("s3_threadpool_size", 1) # s3 conn threadpool size
+                  , "set:straggler_configs:%s" % settings.get("straggler_configs", '0.9 2 1') #
                   , "run:mkdir -p ##TMPDIR##"
                   , None
                   ]
