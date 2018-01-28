@@ -21,7 +21,8 @@ class ConfirmEmitState(OnePassState):
         super(ConfirmEmitState, self).__init__(prevState)
 
     def post_transition(self):
-        self.emit_event('frames', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['out_key']})
+        self.emit_event('frames_0', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['out_key']})
+        self.emit_event('frames_1', {'metadata': self.in_events['frames']['metadata'], 'key': self.local['out_key']})
         return self.nextState(self)  # don't forget this
 
 
@@ -87,4 +88,4 @@ class InitState(InitStateTemplate):
 
     def __init__(self, prevState, **kwargs):
         super(InitState, self).__init__(prevState, **kwargs)
-        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='video_filter')
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='duplicate_filter')
