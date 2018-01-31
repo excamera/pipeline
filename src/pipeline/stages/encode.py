@@ -30,7 +30,7 @@ class RunState(CommandListState):
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
                   , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/out_0/')
-                  , ('OK:RETVAL(0)', 'run:./ffmpeg -framerate {fps} -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
+                  , ('OK:RETVAL(0)', 'run:time ./ffmpeg -framerate {fps} -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
                                    '-c:v libx264 -pix_fmt yuv420p ##TMPDIR##/out_0/{segment}.mp4')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)

@@ -28,7 +28,7 @@ class RunState(CommandListState):
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/ ##TMPDIR##/in_1/ ##TMPDIR##/out_0/')
                   , ('OK:RETVAL(0)', 'collect:{in_key_0} ##TMPDIR##/in_0')
                   , ('OK:COLLECT', 'collect:{in_key_1} ##TMPDIR##/in_1')
-                  , ('OK:COLLECT', 'run:./ffmpeg -y -i ##TMPDIR##/in_0/%08d.png -i ##TMPDIR##/in_1/%08d.png -filter_complex '
+                  , ('OK:COLLECT', 'run:time ./ffmpeg -y -i ##TMPDIR##/in_0/%08d.png -i ##TMPDIR##/in_1/%08d.png -filter_complex '
                                    '{filter_complex} ##TMPDIR##/out_0/%08d.png')
                   , ('OK:RETVAL(0)', 'emit:##TMPDIR##/out_0 {out_key}')
                   , ('OK:EMIT', None)
