@@ -42,7 +42,7 @@ def plot_stack(lines, chunk_length=None, ystart=None, sort_by_completion_time=Fa
             drawn_line = plt.stackplot(xscale, ts, color='0.9')
             drawn_line[0].set_label('wait')
         else:
-            keywords = filter(lambda x: x in label, color_map.keys())
+            keywords = filter(lambda x: x in valid_values[0][j-1]['msg'][:25], color_map.keys())
             if len(keywords) > 0:
                 drawn_line = plt.stackplot(xscale, ts, color=color_map[keywords[0]])
             else:
