@@ -37,6 +37,11 @@ def collect2(job):
 def collect3(job):
     plot_CDF("logs/"+job[1]+"/log_pb", lambda _,r: 'collect' in r['msg'] and r['op']=='send', lambda _,r: 'COLLECT' in r['msg'] and r['op']=='recv', start_index=2, end_index=2, label=job[0])
 
+def rek(job):
+    plot_CDF("logs/"+job[1]+"/log_pb", lambda _,r: 'OK:HELLO' in r['msg'] and r['op']=='recv' and r['stage']=='rek', lambda _,r: 'quit' in r['msg'] and r['op']=='send' and r['stage']=='rek', start_index=0, end_index=0, label=job[0])
+
+def draw(job):
+    plot_CDF("logs/"+job[1]+"/log_pb", lambda _,r: 'OK:HELLO' in r['msg'] and r['op']=='recv' and r['stage']=='draw', lambda _,r: 'quit' in r['msg'] and r['op']=='send' and r['stage']=='draw', start_index=0, end_index=0, label=job[0])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="plot CDF graphs")
