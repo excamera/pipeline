@@ -1,0 +1,43 @@
+{
+  "nodes":[
+    {
+      "name": "decode",
+      "stage": "decode",
+      "config": {
+      }
+    },
+    {
+      "name": "video_filter",
+      "stage": "video_filter",
+      "config": {
+        "video_filter": "fftfilt=dc_Y=128:weight_Y=squish(1-(Y+X)/100)"
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_to_dash",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:chunks",
+      "dst": "decode:chunks"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "video_filter:frames"
+    },
+    {
+      "src": "video_filter:frames",
+      "dst": "encode:frames"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}

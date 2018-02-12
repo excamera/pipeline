@@ -2,18 +2,23 @@ import os
 import json
 import logging
 import traceback
-
 import grpc
+import pdb
+import time
 from concurrent import futures
 
+import cProfile, pstats, StringIO
+
+from libmu import lightlog
+from libmu.tracker import Tracker
 import pipeline
 from pipeline.schedule import *
+from pipeline.schedule.abstact_schedulers import SchedulerBase
 from pipeline.service import pipeline_pb2
 from pipeline.service import pipeline_pb2_grpc
 from pipeline.config import settings
 from pipeline.util.amend_mpd import amend_mpd
 from pipeline.util.media_probe import get_signed_URI
-import pdb
 
 _server = None
 
@@ -24,22 +29,30 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
         try:
             pipe = pipeline.create_from_spec(json.loads(request.pipeline_spec))
 
-            for index in range(len(request.inputs)):
-                in_event = {'key': request.inputs[index].value,
-                            'metadata': {'pipe_id': pipe.pipe_id, 'lineage': '0'}}
-                pipe.inputs['input_' + str(index)][1].put({request.inputs[index].type: in_event})
-                # put events to the buffer queue of all input stages
+            for instream in request.inputstreams:
+                for input in instream.inputs:
+                    in_event = {'key': input.uri,
+                                'metadata': {'pipe_id': pipe.pipe_id, 'lineage': input.lineage}}
+                    pipe.inputs[instream.name][1].put({instream.type: in_event})
+                    # put events to the buffer queue of all input stages
 
             pipe_dir = 'logs/' + pipe.pipe_id
             os.system('mkdir -p ' + pipe_dir)
 
-            handler = logging.FileHandler(pipe_dir + '/log.csv')
-            handler.setLevel(logging.DEBUG)
-            handler.setFormatter(logging.Formatter('%(created)f, %(message)s'))
-            logger = logging.getLogger(pipe.pipe_id)
-            logger.propagate = False
-            logger.setLevel(logging.DEBUG)
-            logger.addHandler(handler)
+            # handler = logging.FileHandler(pipe_dir + '/log.csv')
+            # handler.setLevel(logging.DEBUG)
+            # handler.setFormatter(logging.Formatter('%(created)f, %(message)s'))
+            #memhandler = logging.handlers.MemoryHandler(1024**2*10, target=handler)
+            #memhandler.shouldflush = lambda _: False
+
+            logger = lightlog.getLogger(pipe.pipe_id)
+            logger.add_metadata('pipespec:\n%s\ninput:\n%s\n...\nsettings:\n%s' %
+                                (request.pipeline_spec, request.inputstreams[0].inputs[:1], settings))
+            # logger = logging.getLogger(pipe.pipe_id)
+            # logger.propagate = False
+            # logger.setLevel(logging.DEBUG)
+            # logger.addHandler(memhandler)
+            # logger.addHandler(handler)
 
             conf_sched = settings.get('scheduler', 'SimpleScheduler')
             candidates = [s for s in dir(pipeline.schedule) if hasattr(vars(pipeline.schedule)[s], conf_sched)]
@@ -48,10 +61,15 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 raise ValueError("scheduler %s not found" % conf_sched)
             sched = getattr(vars(pipeline.schedule)[candidates[0]], conf_sched)  # only consider the first match
 
-            logger.info('starting pipeline')
+            logger.info(ts=time.time(), msg='start pipeline')
             sched.schedule(pipe)
-            logger.info('pipeline finished')
+            logger.info(ts=time.time(), msg='finish pipeline')
 
+            logging.info("pipeline: %s finished", pipe.pipe_id)
+            with open(pipe_dir + '/log_pb', 'wb') as f:
+                f.write(logger.serialize())
+
+            #memhandler.flush()
             result_queue = pipe.outputs.values()[0][1]  # there should be only one output queue
 
             num_m4s = 0
@@ -91,6 +109,10 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                 return pipeline_pb2.SubmitReply(success=False, error_msg='no output is found')
 
         except Exception as e:
+            logging.error(traceback.format_exc())
+            if 'pipe_dir' in vars():
+                with open(pipe_dir + '/log_pb', 'wb') as f:
+                    f.write(logger.serialize())
             return pipeline_pb2.SubmitReply(success=False, error_msg=traceback.format_exc())
 
 
@@ -104,4 +126,7 @@ def serve():
 
 def stop(val):
     global _server
+    SchedulerBase.stop()
+    Tracker.stop()
+    time.sleep(1)
     _server.stop(val)

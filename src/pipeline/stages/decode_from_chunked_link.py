@@ -31,6 +31,10 @@ class ConfirmEmitState(OnePassState):
     def post_transition(self):
         self.emit_event('frames', {'metadata': self.in_events['chunked_link']['metadata'], 'key': self.local['out_key']
             , 'nframes': self.local['output_count']})
+
+        #for smart serialization 
+        lineage = self.in_events['chunked_link']['metadata']['lineage']
+        self.pipe['frames_per_worker'][lineage] = self.local['output_count']
         return self.nextState(self)  # don't forget this
 
 
@@ -74,8 +78,10 @@ class RunState(CommandListState):
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
-        self.local['out_key'] = settings['storage_base'] + self.in_events['chunked_link']['metadata'][
-            'pipe_id'] + '/decode/' + libmu.util.rand_str(16) + '/'
+        if settings.get('hash_bucket'):
+            self.local['out_key'] = settings['temp_storage_base'] + libmu.util.rand_str(1) + '/' + libmu.util.rand_str(16) + '/'
+        else:
+            self.local['out_key'] = settings['storage_base'] + libmu.util.rand_str(16) + '/'
 
         params = {'starttime': self.in_events['chunked_link']['starttime'],
                   'frames': self.in_events['chunked_link']['frames'],
@@ -88,3 +94,7 @@ class RunState(CommandListState):
 
 class InitState(InitStateTemplate):
     nextState = RunState
+
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='decode')

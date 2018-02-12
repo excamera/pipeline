@@ -8,7 +8,7 @@ service Pipeline {
 
 message SubmitRequest {
   string pipeline_spec = 1;
-  repeated Input inputs = 2;
+  repeated InputStream inputstreams = 2;
 }
 
 message SubmitReply {
@@ -17,7 +17,13 @@ message SubmitReply {
   string error_msg = 3;
 }
 
+message InputStream {
+  string name = 1;
+  string type = 2;
+  repeated Input inputs = 3;
+}
+
 message Input {
-  string type = 1;
-  string value = 2;
+  string uri = 1;
+  string lineage = 2;
 }

@@ -1,0 +1,22 @@
+{
+  "nodes":[
+    {
+      "name": "rpc_bench",
+      "stage": "rpc_bench",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:chunks",
+      "dst": "rpc_bench:chunks"
+    },
+    {
+      "src": "rpc_bench:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}

@@ -26,7 +26,6 @@ def start_daemon():
 def shutdown(*args):
     logging.info("Shutting down daemon")
     pipeline_server.stop(0)
-    exit(0)
 
 
 def main():
@@ -41,13 +40,10 @@ def main():
 
     logging.debug("config: %s", settings)
 
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
-
     try:
         start_daemon()
     except KeyboardInterrupt:
-        shutdown()
+        os._exit(0)
 
 
 if __name__ == '__main__':

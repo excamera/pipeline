@@ -4,13 +4,8 @@
       "name": "parlink",
       "stage": "parallelize_link",
       "config": {
-      }
-    },
-    {
-      "name": "googleFace",
-      "stage": "googleFace",
-      "lambda_function": "tempc_Y97xel9I",
-      "config": {
+        "framesperchunk": "{fps}",
+        "filter": "[fps>=24]"
       }
     },
     {
@@ -20,10 +15,8 @@
       }
     },
     {
-      "name": "rek",
-      "stage": "rek",
-      "lambda_function": "tempc_Y97xel9I",
-      "deliver_function": "anypair_deliver_func",
+      "name": "grayscale",
+      "stage": "grayscale",
       "config": {
       }
     },
@@ -42,24 +35,15 @@
       "dst": "parlink:video_link"
     },
     {
-      "src": "input_1:person",
-      "dst": "googleFace:person"
-    },
-    {
-      "src": "googleFace:person",
-      "dst": "rek:person",
-      "durable": true
-    },
-    {
       "src": "parlink:chunked_link",
       "dst": "decode:chunked_link"
     },
     {
       "src": "decode:frames",
-      "dst": "rek:frames"
+      "dst": "grayscale:frames"
     },
     {
-      "src": "rek:frames",
+      "src": "grayscale:frames",
       "dst": "encode:frames"
     },
     {
@@ -67,5 +51,4 @@
       "dst": "output_0:chunks"
     }
   ]
-
 }

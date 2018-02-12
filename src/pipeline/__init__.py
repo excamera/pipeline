@@ -13,14 +13,14 @@ import pdb
 
 class Pipeline(object):
     class Stage(object):
-        def __init__(self, key, stage_name, lambda_function, init_state, config, event, deliver_func=None, regions=None):
+        def __init__(self, key, stage_name, lambda_function, init_state, config, event, region, deliver_func=None):
             self.key = key
             self.stage_name = stage_name
             self.lambda_function = lambda_function
             self.event = event
             self.init_state = init_state
             self.config = config
-            self.regions = regions
+            self.region = region
             self.deliver_func = deliver_func
             self.downstream_map = {}
             self.buffer_queues = {}
@@ -81,8 +81,8 @@ def create_from_spec(pipe_spec):
             , init_state
             , node.get('config', {})
             , node.get('event', event)
+            , [node.get('region', settings['default_region'])]
             , deliver_func=getattr(pipeline.stages.util, node.get('deliver_function', 'default_deliver_func'))
-            , regions=None
         ))
 
     for stream in pipe_spec.get('streams', []):

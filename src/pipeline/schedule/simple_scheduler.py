@@ -13,7 +13,7 @@ class SimpleScheduler(SchedulerBase):
         for key, stage in pipeline.stages.iteritems():
             while not stage.deliver_queue.empty():
                 t = tracker.Task(stage.lambda_function, stage.init_state, stage.event, in_events=stage.deliver_queue.get(),
-                                 emit_event=stage.emit, config=stage.config, pipe=pipeline.pipedata, regions=['us-east-1'])
+                                 emit_event=stage.emit, config=stage.config, pipe=pipeline.pipedata, regions=stage.region)
                 submitted.append(t)
                 pipeline.tasks.append(t)
                 tracker.Tracker.submit(t)

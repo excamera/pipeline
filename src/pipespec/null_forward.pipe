@@ -1,0 +1,74 @@
+{
+  "nodes":[
+    {
+      "name": "parlink",
+      "stage": "parallelize_link",
+      "config": {
+        "framesperchunk": "{fps}",
+        "chunklimit": 1400
+      }
+    },
+    {
+      "name": "null",
+      "stage": "null",
+      "config": {
+      }
+    },
+    {
+      "name": "null1",
+      "stage": "null",
+      "config": {
+      }
+    },
+        {
+      "name": "null2",
+      "stage": "null",
+      "config": {
+      }
+    },
+    {
+      "name": "null3",
+      "stage": "null",
+      "config": {
+      }
+    },
+            {
+      "name": "null4",
+      "stage": "null",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_link",
+      "dst": "parlink:video_link"
+    },
+    {
+      "src": "parlink:chunked_link",
+      "dst": "null:chunked_link"
+    },
+        {
+      "src": "null:chunked_link",
+      "dst": "null1:chunked_link"
+    },
+        {
+      "src": "null1:chunked_link",
+      "dst": "null2:chunked_link"
+    },
+            {
+      "src": "null2:chunked_link",
+      "dst": "null3:chunked_link"
+    },
+            {
+      "src": "null3:chunked_link",
+      "dst": "null4:chunked_link"
+    },
+        {
+      "src": "null4:chunked_link",
+      "dst": "output_0:chunked_link"
+    }
+  ]
+}

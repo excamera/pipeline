@@ -13,4 +13,5 @@
 
   , "tracker_port": 13579
   , "tracker_backlog": 3000
+  , "pylaunch_addr": "127.0.0.1:50051"
 }

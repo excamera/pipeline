@@ -22,7 +22,7 @@ class ConcurrencyLimitPriorityScheduler(ConcurrencyLimitScheduler):
             stage = sorted_items[i][1]
             t = tracker.Task(stage.lambda_function, stage.init_state, stage.event, in_events=in_event,
                              emit_event=stage.emit, config=stage.config, pipe=pipeline.pipedata,
-                             regions=['us-east-1'])
+                             regions=stage.region)
             ret.append(t)
 
         for item in sorted_items[quota:]:

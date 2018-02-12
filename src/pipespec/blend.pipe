@@ -1,26 +1,12 @@
 {
   "nodes":[
     {
-      "name": "parlink_0",
-      "stage": "parallelize_link",
-      "config": {
-        "framesperchunk": "{fps} * 2"
-      }
-    },
-    {
-      "name": "parlink_1",
-      "stage": "parallelize_link",
-      "config": {
-        "framesperchunk": "{fps} * 2"
-      }
-    },
-    {
       "name": "decode_0",
-      "stage": "decode_from_chunked_link"
+      "stage": "decode"
     },
     {
       "name": "decode_1",
-      "stage": "decode_from_chunked_link"
+      "stage": "decode"
     },
     {
       "name": "blend",
@@ -36,20 +22,12 @@
   "streams":
   [
     {
-      "src": "input_0:video_link",
-      "dst": "parlink_0:video_link"
+      "src": "input_0:chunks",
+      "dst": "decode_0:chunks"
     },
     {
-      "src": "input_1:video_link",
-      "dst": "parlink_1:video_link"
-    },
-    {
-      "src": "parlink_0:chunked_link",
-      "dst": "decode_0:chunked_link"
-    },
-    {
-      "src": "parlink_1:chunked_link",
-      "dst": "decode_1:chunked_link"
+      "src": "input_1:chunks",
+      "dst": "decode_1:chunks"
     },
     {
       "src": "decode_0:frames",

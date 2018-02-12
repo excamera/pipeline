@@ -1,6 +1,7 @@
 import logging
 
-from libmu import CommandListState, OnePassState
+from libmu import CommandListState, OnePassState, TerminalState
+from pipeline.config import settings
 from pipeline.stages.util import default_trace_func, get_output_from_message
 
 
@@ -32,7 +33,8 @@ class Event(object):
 class InitStateTemplate(CommandListState):
     extra = "(init)"
     commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  # , "run:rm -rf /tmp/*"
+                  , "seti:threadpool_s3:%d" % settings.get("s3_threadpool_size", 1) # s3 conn threadpool size
+                  , "set:straggler_configs:%s" % settings.get("straggler_configs", '0.9 2 1') #
                   , "run:mkdir -p ##TMPDIR##"
                   , None
                   ]
@@ -53,3 +55,37 @@ class GetOutputStateTemplate(OnePassState):
 
     def __init__(self, prevState):
         super(GetOutputStateTemplate, self).__init__(prevState)
+
+
+class CreateTarStateTemplate(CommandListState):
+    tar_dir = None
+    commandlist = [
+        (None, 'run:tar -c -f {tar_dir}/archive.tar -C {tar_dir} . && find {tar_dir} -type f -not -name archive.tar -delete'),
+        ('OK:RETVAL(0)', None)
+    ]
+
+    def __init__(self, prevState):
+        super(CreateTarStateTemplate, self).__init__(prevState)
+        self.commands = [s.format(**{'tar_dir': self.tar_dir}) if s is not None else None for s in self.commands]
+
+
+class ExtractTarStateTemplate(CommandListState):
+    tar_dir = None
+    commandlist = [
+        (None, 'run:tar -x -f {tar_dir}/archive.tar -C {tar_dir} && rm -f {tar_dir}/archive.tar'),
+        ('OK:RETVAL(0)', None)
+    ]
+
+    def __init__(self, prevState):
+        super(ExtractTarStateTemplate, self).__init__(prevState)
+        self.commands = [s.format(**{'tar_dir': self.tar_dir}) if s is not None else None for s in self.commands]
+
+
+class FinalStateTemplate(OnePassState):
+    extra = "(sending quit)"
+    expect = None
+    command = "quit:"
+    nextState = TerminalState
+
+    def __init__(self, prevState):
+        super(FinalStateTemplate, self).__init__(prevState)

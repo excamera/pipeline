@@ -2,9 +2,10 @@
 import logging
 import pdb
 
+import libmu.util
 from libmu import tracker, TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState
 from pipeline.config import settings
-from pipeline.stages import InitStateTemplate
+from pipeline.stages import InitStateTemplate, ExtractTarStateTemplate
 from pipeline.stages.util import default_trace_func, get_output_from_message
 from pipeline.util.media_probe import get_duration_from_output_lines
 
@@ -39,6 +40,7 @@ class DashifyState(CommandListState):
 
     def __init__(self, prevState):
         super(DashifyState, self).__init__(prevState)
+        self.local['out_key'] = settings['storage_base']+self.in_events['frames']['metadata']['pipe_id']+'/encode_to_dash/'
         segment = '%08d' % int(self.in_events['frames']['metadata']['lineage'])
         chunk_duration = self.in_events['frames']['metadata'].get('chunk_duration')
         relative_duration = self.local['duration'] / chunk_duration if chunk_duration else ''
@@ -67,22 +69,44 @@ class GetDurationState(OnePassState):
 class EncodeState(CommandListState):
     extra = "(encode)"
     nextState = GetDurationState
-    commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/in_0/')
-                  , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
-                  , ('OK:COLLECT', 'run:mkdir -p ##TMPDIR##/temp_0/ ##TMPDIR##/out_0')
-                  , ('OK:RETVAL(0)', 'run:./ffmpeg -framerate {fps} -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
+    commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/temp_0/ ##TMPDIR##/out_0')
+                  , ('OK:RETVAL(0)', 'run:time ./ffmpeg -framerate {fps} -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
                                      '-c:v libx264 -pix_fmt yuv420p ##TMPDIR##/temp_0/{segment}.mp4')
                     ]
 
     def __init__(self, prevState):
         super(EncodeState, self).__init__(prevState)
-        self.local['out_key'] = settings['storage_base']+self.in_events['frames']['metadata']['pipe_id']+'/encode_to_dash/'
 
-        params = {'in_key': self.in_events['frames']['key'], 'fps': self.in_events['frames']['metadata']['fps'],
+        params = {'fps': self.in_events['frames']['metadata']['fps'],
                   'segment': '%08d' % int(self.in_events['frames']['metadata']['lineage'])}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
 
-class InitState(InitStateTemplate):
+class ExtractTarState(ExtractTarStateTemplate):
+    tar_dir = '##TMPDIR##/in_0/'
     nextState = EncodeState
+
+
+class CollectState(CommandListState):
+    nextState = ExtractTarState if settings.get('use_tar') else EncodeState
+    commandlist = [
+        (None, 'run:mkdir -p ##TMPDIR##/in_0/')
+        , ('OK:RETVAL(0)', 'collect:{in_key} ##TMPDIR##/in_0')
+        , ('OK:COLLECT', 'run:ls ##TMPDIR##/in_0/*png')
+        , ('OK:RETVAL(0)', None)
+    ]
+
+    def __init__(self, prevState):
+        super(CollectState, self).__init__(prevState)
+        params = {'in_key': self.in_events['frames']['key']}
+        self.commands = [s.format(**params) if s is not None else None for s in self.commands]
+
+
+class InitState(InitStateTemplate):
+    nextState = CollectState
+
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='encode')
+
