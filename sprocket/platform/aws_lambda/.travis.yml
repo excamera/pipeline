@@ -1,0 +1,29 @@
+language: cpp
+sudo: required
+services: docker
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++-5
+    - vpx-tools
+    - python-dev
+
+before_script:
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 99
+  - sudo apt-get remove -y --force-yes python-openssl
+  - sudo pip install boto3
+  - sudo pip install pyOpenSSL
+
+script:
+  - ./autogen.sh
+  - ./configure
+  - make -j3 distcheck
+
+after_failure:
+  - cat mu-0.01/_build/src/tests/test-suite.log
+
+notifications:
+  slack: keithw:bq7WABbx9cSlgMM8vljjOPh5

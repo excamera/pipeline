@@ -1,0 +1,55 @@
+{
+  "nodes":[
+    {
+      "name": "parlink",
+      "stage": "parallelize_link",
+      "config": {
+        "framesperchunk": "{fps}"
+      }
+    },
+    {
+      "name": "decode",
+      "stage": "decode_from_chunked_link",
+      "config": {
+      }
+    },
+    {
+      "name": "scale",
+      "stage": "scale",
+      "config": {
+        "scale": 1
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_frame_list",
+      "delivery_function": "serialized_frame_delivery_func",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_link",
+      "dst": "parlink:video_link"
+    },
+    {
+      "src": "parlink:chunked_link",
+      "dst": "decode:chunked_link"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "scale:frames"
+    },
+    {
+      "src": "scale:frame",
+      "dst": "encode:frame_list"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}

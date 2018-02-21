@@ -1,3 +1,3 @@
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = src
+SUBDIRS = sprocket
 EXTRA_DIST = README.md autogen.sh

@@ -6,7 +6,7 @@ AC_PREREQ([2.68])
 AC_INIT([sprocket], [0.01], [liao@eng.ucsd.edu])
 AM_INIT_AUTOMAKE([foreign])
 AM_PATH_PYTHON([2.7])
-AC_CONFIG_SRCDIR([src/pipeline])
+AC_CONFIG_SRCDIR([sprocket])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Add C++ flags
@@ -42,7 +42,7 @@ AM_CHECK_PYTHON_HEADERS(,[AC_MSG_ERROR(could not find Python headers)])
 
 AC_CONFIG_FILES([
         Makefile
-        src/Makefile
-        src/pipeline/Makefile])
+        sprocket/Makefile
+        ])
 
 AC_OUTPUT

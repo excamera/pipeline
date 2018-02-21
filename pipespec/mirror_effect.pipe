@@ -1,0 +1,66 @@
+{
+  "nodes":[
+    {
+      "name": "decode",
+      "stage": "decode"
+    },
+    {
+      "name": "crop",
+      "stage": "duplicate_filter",
+      "config": {
+        "video_filter": "crop=iw/2:ih:0:0"
+      }
+    },
+    {
+      "name": "hflip",
+      "stage": "video_filter",
+      "config": {
+        "video_filter": "hflip"
+      }
+    },
+    {
+      "name": "hstack",
+      "stage": "merge_filter",
+      "delivery_function": "pair_delivery_func",
+      "config": {
+        "filter_complex": "[1:v][0:v]hstack"
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_to_dash"
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:chunks",
+      "dst": "decode:chunks"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "crop:frames"
+    },
+    {
+      "src": "crop:frames_0",
+      "dst": "hflip:frames"
+    },
+    {
+      "src": "hflip:frames",
+      "dst": "hstack:frames_0"
+    },
+    {
+      "src": "crop:frames_1",
+      "dst": "hstack:frames_1"
+    },
+    {
+      "src": "hstack:frames",
+      "dst": "encode:frames"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}

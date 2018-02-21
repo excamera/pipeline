@@ -37,10 +37,16 @@
 *.m4
 *.csv
 
+*.bak
+*_pb2.py
+*_pb2_grpc.py
+
 Makefile
 Makefile.in
 .deps
 .libs
+.DS_Store
+.nfs*
 
 /aclocal.m4
 /autom4te.cache/
@@ -62,7 +68,6 @@ Makefile.in
 /test-driver
 .sync/
 .idea/
-src/pipeline/service/pipeline_pb2.py
-src/pipeline/service/pipeline_pb2_grpc.py
-src/logs/
-src/interesting_logs/
+archive/
+eval/
+logs/

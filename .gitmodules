@@ -1,7 +1,3 @@
-[submodule "mu"]
-	path = external/mu
-	url = https://github.com/excamera/mu.git
-	branch = taskspec
 [submodule "alfalfa"]
 	path = external/alfalfa
 	url = https://github.com/excamera/alfalfa.git

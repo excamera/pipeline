@@ -1,0 +1,3 @@
+#!/bin/sh
+
+LAMBDA_FUNCTION=TestFunction AWS_SECRET_ACCESS_KEY=shhhhhhhDontTell AWS_ACCESS_KEY_ID=fakeID exec ../frontend/hello

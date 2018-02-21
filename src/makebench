@@ -1,5 +1,0 @@
-#!/bin/bash
-for i in {0000000000..0000000014} 
-do 
-echo "chunks s3://liz-pipeline/benchVideo/15/out$i.mp4"
-done

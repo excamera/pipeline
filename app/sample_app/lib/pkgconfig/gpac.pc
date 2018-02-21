@@ -1,0 +1,12 @@
+prefix=/home/ec2-user/lambda/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: gpac
+Description: GPAC Multimedia Framework
+URL: http://gpac.sourceforge.net
+Version:0.6.1
+Cflags: -I${prefix}/include/gpac
+Libs: -L${libdir} -lgpac
+Libs.private: -lm -L/home/ec2-user/lambda/local/lib  -lpthread -ldl

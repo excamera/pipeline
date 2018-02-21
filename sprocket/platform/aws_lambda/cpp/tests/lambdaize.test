@@ -1,0 +1,3 @@
+#!/bin/sh
+
+PYTHONPATH=../lambdaize /usr/bin/python2.7 "${srcdir}"/../lambdaize/test
