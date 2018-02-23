@@ -28,13 +28,12 @@
 *.out
 *.app
 
-# Specific to mu
+# Others
 *.a
 *.o
 *.pyc
 *.lo
 *.la
-*.m4
 *.csv
 
 *.bak
