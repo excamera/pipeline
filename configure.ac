@@ -19,16 +19,9 @@ AC_SUBST([PICKY_CXXFLAGS])
 AC_PROG_CXX
 AC_PROG_RANLIB
 LT_INIT
-AC_CHECK_PROG([PROTOC], [protoc], [protoc])
-AS_IF([test "x${PROTOC}" == "x"],
-          [AC_MSG_ERROR([ProtoBuf compiler "protoc" not found.])])
 
 # Checks for libraries.
 PKG_CHECK_MODULES([OpenSSL], [libssl libcrypto])
-PKG_CHECK_MODULES(PROTOBUF, protobuf >= 3.4.0)
-AC_SUBST(PROTOBUF_LIBS)
-AC_SUBST(PROTOBUF_CFLAGS)
-AC_SUBST(PROTOBUF_VERSION)
 
 # Checks for header files.
 
