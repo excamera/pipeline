@@ -6,10 +6,14 @@ uses https://github.com/excamera/mu for interacting with mu.
 
 ## How to build the code
 ```
-git clone --recursive git@github.com:excamera/pipeline.git
+git clone --recursive https://github.com/excamera/pipeline.git
 cd pipeline
 ./autogen.sh
 ./configure
 make -j$(nproce)
-make test
+
+cd sprocket/platform/aws_lambda
+./autogen.sh
+./configure
+make -j$(nproce)
 ```
