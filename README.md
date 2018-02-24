@@ -10,10 +10,10 @@ git clone --recursive https://github.com/excamera/pipeline.git
 cd pipeline
 ./autogen.sh
 ./configure
-make -j$(nproce)
+make -j$(nproc)
 
 cd sprocket/platform/aws_lambda
 ./autogen.sh
 ./configure
-make -j$(nproce)
+make -j$(nproc)
 ```
