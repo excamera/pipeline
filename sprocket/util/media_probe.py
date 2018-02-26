@@ -5,11 +5,18 @@ import subprocess
 
 import boto3
 
+from sprocket.config import settings
 from sprocket.util.s3signurl import sign
+
+with open(settings['aws_access_key_id_file'], 'r') as f:
+    akid = f.read().strip()
+with open(settings['aws_secret_access_key_file'], 'r') as f:
+    secret = f.read().strip()
+
 
 def get_signed_URI(URI):
     if URI.startswith('s3://'):
-        return sign(URI.split('/')[2], '/'.join(URI.split('/')[3:]), os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'], https=True, expiry=86400)
+        return sign(URI.split('/')[2], '/'.join(URI.split('/')[3:]), akid, secret, https=True, expiry=86400)
     else:
         return URI
 
