@@ -15,7 +15,7 @@ from sprocket.controlling.common.defs import Defs
 from sprocket.controlling.common.network import connect_socket
 from sprocket.controlling.common.socket_nb import SocketNB
 from sprocket.controlling.worker.fd_wrapper import FDWrapper
-from sprocket.util.misc import ForkedPdb
+#from sprocket.util.misc import ForkedPdb
 
 s3_client = boto3.client('s3')
 
@@ -426,7 +426,7 @@ def do_emit_list(msg, vals):
         except:
             print("k: %s" % k)
             print("file_key_pairs: %s" % file_key_pairs)
-            ForkedPdb().set_trace()
+            #ForkedPdb().set_trace()
 
         if protocol == 's3':
             bucket = path.split('/', 1)[0]

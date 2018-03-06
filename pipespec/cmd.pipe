@@ -1,32 +1,18 @@
 {
   "nodes":[
   {
-    "name": "parlink",
-      "stage": "parallelize_link",
-      "config": {                                                                                          
-        "framesperchunk": "{fps}/4",
-        "chunklimit": 1,
-      },
-      "lambda_function": "lambda_test_JS2aw5Hx"
-  },                                                                                                 
-  {
     "name": "cmd",
     "stage": "cmd",
     "config": {
-      "cmd": "your_command_goes_here"
-    },
-    "lambda_function": "lambda_test_85a6LUzG"
+      "cmd": "sleep 5"
+    }
   }
   ],
 
   "streams":
     [
     {
-      "src": "input_0:video_link",
-      "dst": "parlink:video_link"
-    },                                                                                                 
-    {
-      "src": "parlink:chunked_link",
+      "src": "input_0:chunked_link",
       "dst": "cmd:chunked_link"
     },
     {
