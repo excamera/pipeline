@@ -7,8 +7,8 @@
       }
     },
     {
-      "name": "googleFace",
-      "stage": "googleFace",
+      "name": "matchFace",
+      "stage": "matchFace",
       "config": {
       }
     },
@@ -20,7 +20,7 @@
     },
     {
       "name": "scenechange",
-      "stage": "sceneemit_modular",
+      "stage": "scenechange",
       "config": {
       }
     },
@@ -55,7 +55,7 @@
     },
     {
       "src": "input_1:person",
-      "dst": "googleFace:person"
+      "dst": "matchFace:person"
     },
     {
       "src": "parallelize_link:chunked_link",

@@ -1,31 +1,20 @@
 #!/usr/bin/python
-import json
+# coding=utf-8
 import logging
+import json
 import pdb
-
 import math
-
-from sprocket.controlling.tracker.machine_state import TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
-from sprocket.config import settings
-from sprocket.stages.util import default_trace_func, get_output_from_message, preprocess_config,staged_trace_func
-from copy import deepcopy
 import time 
+from sprocket.util.misc import rand_str
+from sprocket.controlling.tracker.machine_state import TerminalState, CommandListState, OnePassState, IfElseState
+from sprocket.config import settings
+from sprocket.stages import InitStateTemplate, CreateTarStateTemplate,ExtractTarStateTemplate, FinalStateTemplate
+from sprocket.stages.util import default_trace_func, get_output_from_message
+from copy import deepcopy
 
-class FinalState(OnePassState):
-    extra = "(sending quit)"
-    expect = None
-    command = "quit:"
-    nextState = TerminalState
+class FinalState(FinalStateTemplate):
+    pass
 
-    def __init__(self, prevState):
-        super(FinalState, self).__init__(prevState)
-
-        g_end = time.time()
-        executionTime = str(g_end - self.local['g_start']) 
-        self.pipe['benchmarkFile'].write("\nStage:SceneChange\n")
-        self.pipe['benchmarkFile'].write("Lineage:" + str(self.local['lineage'])+"\n")
-        self.pipe['benchmarkFile'].write(str(executionTime))
-        #self.pipe['benchmarkFile'].close()
 class EmitState(OnePassState):
     extra = "(emit)"
     expect = None
@@ -42,10 +31,10 @@ class EmitState(OnePassState):
     def post_transition(self):
 
         metadata = self.in_events['frames']['metadata']
-        fps = metadata['fps'] 
+        fps = metadata['fps']
         self.local['lineage'] = self.in_events['frames']['metadata']['lineage']
 
-        #put scene change markers 
+        #put scene change markers
         t1 = self.local['start_time']
         timeMarkers = []
         for time in self.local['times']:
@@ -62,7 +51,7 @@ class EmitState(OnePassState):
             if metadata['end'] and (i == len(self.local['key_list'])-1):
                 sceneChange = True
 
-            self.emit_event('scene_list', {'metadata': self.in_events['frames']['metadata'], 
+            self.emit_event('scene_list', {'metadata': self.in_events['frames']['metadata'],
                     'key': self.local['key_list'][i],'number':i+1,
                     'EOF': i == len(self.local['key_list'])-1, 'type': 'png',
                     'nframes': self.in_events['frames']['nframes'],
@@ -89,9 +78,9 @@ class GetOutputState(OnePassState):
 
         self.local['times'] = []
 
-        #find all the time stamps of scene changes 
+        #find all the time stamps of scene changes
         for line in output[1:]:
-            self.local['times'].append( float(self.local['start_time']) + float(line)) 
+            self.local['times'].append( float(self.local['start_time']) + float(line))
 
         return self.nextState(self)  # don't forget this
 
@@ -106,27 +95,20 @@ class RunState(CommandListState):
                     -vf "select=gt(scene\,0.1),showinfo" -f null - > ##TMPDIR##/out1.txt 2>&1')
                     , ('run: cat ##TMPDIR##/out1.txt')
                     , ("run:grep -Poe '(?<=pts_time:).*(?=pos)|(?<=Duration: ).*(?=, start)'\
-                    ##TMPDIR##/out1.txt")  
+                    ##TMPDIR##/out1.txt")
                    ]
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
         self.local['start_time'] = self.in_events['frames']['seconds'][0]
-        params = {'in_key':self.in_events['frames']['key']} 
+        params = {'in_key':self.in_events['frames']['key']}
         logging.debug('params: ' + str(params))
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
 
 
-class InitState(CommandListState):
-    extra = "(init)"
+class InitState(InitStateTemplate):
     nextState = RunState
-    commandlist = [ ("OK:HELLO", "seti:nonblock:0")
-                  , "run:rm -rf /tmp/*"
-                  , "run:mkdir -p ##TMPDIR##"
-                  , None
-                  ]
-    def __init__(self, prevState, **kwargs):
-        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Scenechange",self.in_events['frames']['nframes'], self.in_events['frames']['me'],ev,msg,op))),**kwargs)
-        logging.debug('in_events: %s', kwargs['in_events'])
-        self.local['g_start'] = time.time()
 
+    def __init__(self, prevState, **kwargs):
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='scenechange')
