@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o pipefail
+set -eou pipefail
 
 DEFAULT_MEM_SIZE=3008
 DEFAULT_TIMEOUT=120
@@ -22,29 +22,30 @@ if [ -z $AWS_ROLE ]; then
   exit 1
 fi
 
-if [ -z $FUN_NAME ]; then
+if [ -z ${FUN_NAME:-} ]; then
   FUN_NAME="$USER"_$(basename $1)
 fi
-if [ -z $MEM_SIZE ]; then
+if [ -z ${MEM_SIZE:-} ]; then
   MEM_SIZE="$DEFAULT_MEM_SIZE"
 fi
-if [ -z $TIMEOUT ]; then
+if [ -z ${TIMEOUT:-} ]; then
   TIMEOUT="$DEFAULT_TIMEOUT"
 fi
-if [ -z $REGION ]; then
+if [ -z ${REGION:-} ]; then
   REGION="$DEFAULT_REGION"
 fi
 
 INITDIR=$(pwd -P)
 TMPDIR=$(mktemp -d)
-ZIPFILE="$TMPDIR"/lambda.zip
-SPROCKET_ROOT="$(dirname $(readlink -f "$0"))"/../../../..
+ZIPFILE="$TMPDIR"/lambda_code.zip
+AWS_DIR="$(dirname $(readlink -f "$0"))"/..
+SPROCKET_ROOT_S_PARENT="$AWS_DIR"/../../..
 SPROCKET_FILES="sprocket/__init__.py sprocket/controlling/__init__.py sprocket/controlling/worker/__init__.py sprocket/controlling/worker/fd_wrapper.py sprocket/controlling/worker/worker.py sprocket/controlling/common/__init__.py sprocket/controlling/common/network.py sprocket/controlling/common/handler.py sprocket/controlling/common/defs.py sprocket/controlling/common/socket_nb.py"
-LAMBDA_FUNCTION=lambda_function.py
-COMMON_DEPS="$(dirname $(readlink -f "$0"))"/../common_deps
+LAMBDA_FUNCTION="$AWS_DIR"/lambda_function.py
+COMMON_DEPS="$AWS_DIR"/common_deps
 APP=$(readlink -f "$1")
 
-cd "$SPROCKET_ROOT"
+cd "$SPROCKET_ROOT_S_PARENT"
 for F in $SPROCKET_FILES; do
   cp --parent "$F" "$TMPDIR"
 done
