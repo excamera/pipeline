@@ -27,21 +27,21 @@
     {
       "name": "rek",
       "stage": "rek",
-      "deliver_function": "serialized_scene_deliver_func",
+      "delivery_function": "serialized_scene_delivery_func",
       "config": {
       }
     },
     {
       "name": "draw",
       "stage": "draw",
-      "deliver_function": "serialized_scene_deliver_func",
+      "delivery_function": "serialized_scene_delivery_func",
       "config": {
       }
     },
     {
       "name": "encode",
       "stage": "encode_frame_list",
-      "deliver_function": "serialized_frame_deliver_func",
+      "delivery_function": "serialized_frame_delivery_func",
       "config": {
       }
     }
