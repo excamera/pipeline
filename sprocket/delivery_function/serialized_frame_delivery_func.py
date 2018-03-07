@@ -61,6 +61,15 @@ def serialized_frame_delivery_func(buffer_queues, deliver_queue, **kwargs):
             buffer_queues.values()[0].put(e)  # put them back
     else:
         # that're the only frames left, deliver
+
+        #Liz adds: still deliver in chunks (to solve bug of one large leftover)
+        while start + framesperchunk < len(ordered_events):
+            merged = merge_events(ordered_events[start:start+framesperchunk], str(next_lineage))
+            deliver_queue.put(merged)
+            logging.info("delivered leftover: %s", merged)
+            start += framesperchunk
+            next_lineage += 1
+
         merged = merge_events(ordered_events[start:], str(next_lineage))
         deliver_queue.put(merged)
         logging.info("delivered leftover: %s", merged)

@@ -2,11 +2,8 @@
 import json
 import logging
 import pdb
-
 import math
-
 import copy
-
 from sprocket.controlling.tracker.machine_state import TerminalState, CommandListState, ForLoopState, OnePassState, ErrorState, IfElseState
 from sprocket.config import settings
 from sprocket.stages import InitStateTemplate
@@ -44,13 +41,17 @@ class EmitState(OnePassState):
             # actual parallelizing here
             newmeta = copy.deepcopy(metadata)
             starttime = i * (framesperchunk - overlap) / metadata['fps']
+            end = False
+            if starttime + (framesperchunk/metadata['fps']) >= self.local['duration']:
+                end = True
             newmeta['lineage'] = str(i + 1)
             newmeta['chunk_duration'] = framesperchunk / metadata['fps']
             self.emit_event('chunked_link', {'metadata': newmeta,
                                              'key': self.in_events['video_link']['key'],
                                              'selector': self.local['selector'],
                                              'starttime': starttime,
-                                             'frames': framesperchunk})
+                                             'frames': framesperchunk,
+                                             'end':end})
             i += 1
         return self.nextState(self)  # don't forget this
 
@@ -89,8 +90,6 @@ class RunState(CommandListState):
                   'selector': selector}
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
         
-        #for smart serialization
-        self.pipe['frames_per_worker'] = {}
 
 class InitState(InitStateTemplate):
     nextState = RunState

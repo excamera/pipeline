@@ -7,41 +7,41 @@
       }
     },
     {
-      "name": "googleFace",
-      "stage": "googleFace",
+      "name": "matchFace",
+      "stage": "matchFace",
       "config": {
       }
     },
     {
       "name": "decode",
-      "stage": "my_decode",
+      "stage": "rek_decode",
       "config": {
       }
     },
     {
       "name": "scenechange",
-      "stage": "sceneemit_modular",
+      "stage": "scenechange",
       "config": {
       }
     },
     {
       "name": "rek",
-      "stage": "new_rek",
-      "deliver_function": "serialized_scene_deliver_func",
+      "stage": "rek",
+      "delivery_function": "serialized_scene_delivery_func",
       "config": {
       }
     },
     {
       "name": "draw",
-      "stage": "new_draw",
-      "deliver_function": "serialized_scene_deliver_func",
+      "stage": "draw",
+      "delivery_function": "serialized_scene_delivery_func",
       "config": {
       }
     },
     {
       "name": "encode",
       "stage": "encode_frame_list",
-      "deliver_function": "serialized_frame_deliver_func",
+      "delivery_function": "serialized_frame_delivery_func",
       "config": {
       }
     }
@@ -55,7 +55,7 @@
     },
     {
       "src": "input_1:person",
-      "dst": "googleFace:person"
+      "dst": "matchFace:person"
     },
     {
       "src": "parallelize_link:chunked_link",

@@ -58,6 +58,6 @@ class InitState(CommandListState):
                   ]    
     
     def __init__(self, prevState, **kwargs):
-        super(InitState,self).__init__(prevState, trace_func=kwargs.get('trace_func',(lambda ev,msg,op:staged_trace_func("Google_Face",1,1,ev,msg,op))),**kwargs)
-        logging.debug('in_events: %s', kwargs['in_events'])
+        super(InitState, self).__init__(prevState, **kwargs)
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='parallelize_link')
 
