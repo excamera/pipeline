@@ -5,6 +5,7 @@ import json
 import pdb
 import math
 import time 
+import uuid
 from sprocket.util.misc import rand_str
 from sprocket.controlling.tracker.machine_state import TerminalState, CommandListState, OnePassState, IfElseState
 from sprocket.config import settings
