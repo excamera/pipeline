@@ -5,14 +5,17 @@ import json
 from multiprocessing.pool import ThreadPool
 import requests
 from sprocket.platform.launcher import LauncherBase
-import pdb
+
 class Launcher(LauncherBase):
     """
     AWS Lambda launcher
     """
     @staticmethod
     def post_request(fn_name, akid, secret, payload):
-        r = requests.post('https://us-central1-lixiang-project-sprocket.cloudfunctions.net/'+fn_name, data=json.loads(payload))
+        d = json.loads(payload)
+        d['akid'] = akid
+        d['secret'] = secret
+        r = requests.post('https://us-central1-lixiang-project-sprocket.cloudfunctions.net/'+fn_name, data=d)
         logging.info(r.content)
 
     @classmethod
