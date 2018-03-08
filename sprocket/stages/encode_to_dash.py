@@ -70,7 +70,7 @@ class EncodeState(CommandListState):
     extra = "(encode)"
     nextState = GetDurationState
     commandlist = [ (None, 'run:mkdir -p ##TMPDIR##/temp_0/ ##TMPDIR##/out_0')
-                  , ('OK:RETVAL(0)', 'run:time ./ffmpeg -framerate {fps} -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
+                  , ('OK:RETVAL(0)', 'run:./ffmpeg -framerate {fps} -start_number 1 -i ##TMPDIR##/in_0/%08d.png '
                                      '-c:v libx264 -pix_fmt yuv420p ##TMPDIR##/temp_0/{segment}.mp4')
                     ]
 
