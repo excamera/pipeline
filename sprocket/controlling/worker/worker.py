@@ -191,7 +191,7 @@ make_retrievestring = lambda m, v: make_urstring(m, v, 'inkey', 'targfile')
 #  worker enters here
 ###
 def worker_handler(event, _):
-    lambda_start_ts = time.time()
+    lambda_start_ts = time.time() if not 'start_ts' in event else event['start_ts']
 
     Defs.cmdstring = cmdstring
     Defs.make_cmdstring = staticmethod(make_cmdstring)
