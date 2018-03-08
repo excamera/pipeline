@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from util import preprocess, read_records
 
-cmds = ('sleep', 'seti', 'invocation', 'request', 'run:./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl', 'run:tar', 'lambda')
+cmds = ('sleep', 'seti', 'invocation', 'request', 'run:./ffmpeg', 'run:time ./ffmpeg', 'emit', 'quit', 'collect', 'run:./youtube-dl', 'run:tar', 'lambda')
 
 color_map = {
         'invocation': 'r',
@@ -18,8 +18,8 @@ color_map = {
         'ffmpeg': 'g'
         }
 
-def plot_stack(lines, chunk_length=None, ystart=None, sort_by_completion_time=False):
-    data = preprocess(lines, cmd_of_interest="", send_only=False) # empty string cmd_of_interest means all cmds
+def plot_stack(lines, chunk_length=None, ystart=None, verbose=False, sort_by_completion_time=False):
+    data = preprocess(lines, cmd_of_interest="" if verbose else cmds, send_only=False) # empty string cmd_of_interest means all cmds
     values = data.values()
     lengths = [len(r) for r in values]
     common_len = max(set(lengths), key=lengths.count)
@@ -70,6 +70,7 @@ def plot_stack(lines, chunk_length=None, ystart=None, sort_by_completion_time=Fa
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="plot stack graphs")
     parser.add_argument("logfile", help="pipeline log file", type=str)
+    parser.add_argument("-v", "--verbose", help="show ts of all commands", action="store_true")
     parser.add_argument("-s", "--sort", help="sort by completion time", action="store_true")
     parser.add_argument("--chunklen", help="chunk length", type=float)
     parser.add_argument("--playtime", help="virtual playback start time", type=float)
@@ -77,6 +78,6 @@ if __name__ == '__main__':
     
     lines = read_records(sys.argv[1])
 
-    plot_stack(lines, chunk_length=args.chunklen, ystart=args.playtime, sort_by_completion_time=args.sort)
+    plot_stack(lines, chunk_length=args.chunklen, ystart=args.playtime, verbose=args.verbose, sort_by_completion_time=args.sort)
     plt.show()
 
