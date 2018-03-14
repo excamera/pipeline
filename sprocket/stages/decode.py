@@ -34,8 +34,6 @@ class ConfirmEmitState(OnePassState):
 
         #for smart serialization
         lineage = self.in_events['chunks']['metadata']['lineage']
-        self.pipe['frames_per_worker'] = self.pipe.get('frames_per_worker', {})
-        self.pipe['frames_per_worker'][lineage] = self.local['output_count']
         return self.nextState(self)  # don't forget this
 
 

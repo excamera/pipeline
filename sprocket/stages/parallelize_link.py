@@ -89,9 +89,6 @@ class RunState(CommandListState):
         params = {'link': self.in_events['video_link']['key'],
                   'selector': selector}
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
-        #for smart serialization
-        self.pipe['frames_per_worker'][lineage] = {}
-        
 
 class InitState(InitStateTemplate):
     nextState = RunState
