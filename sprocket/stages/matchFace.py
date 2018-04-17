@@ -38,14 +38,14 @@ class GetOutputState(OnePassState):
 class RunState(CommandListState):
     extra = "(run)"
     nextState = GetOutputState
-    commandlist = [(None, 'run: python googleFace_init_s3.py "{person}" 5 ##TMPDIR##')
+    commandlist = [(None, 'run: python googleFace_init_s3.py "{person}" {bucket} 5 ##TMPDIR##')
                    # output will be used in latter states
                    ]
 
     def __init__(self, prevState):
         super(RunState, self).__init__(prevState)
-
-        params = {'person': self.in_events['person']['key']}
+        self.local['bucket'] = settings['storage_base'].split('s3://')[1].split('/')[0]
+        params = {'person': self.in_events['person']['key'],'bucket': self.local['bucket']}
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
 
 class InitState(CommandListState):
