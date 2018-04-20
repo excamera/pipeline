@@ -42,7 +42,7 @@ AWS_DIR="$(dirname $(readlink -f "$0"))"/..
 SPROCKET_ROOT_S_PARENT="$AWS_DIR"/../../..
 SPROCKET_FILES="sprocket/__init__.py sprocket/controlling/__init__.py sprocket/controlling/worker/__init__.py sprocket/controlling/worker/fd_wrapper.py sprocket/controlling/worker/worker.py sprocket/controlling/common/__init__.py sprocket/controlling/common/network.py sprocket/controlling/common/handler.py sprocket/controlling/common/defs.py sprocket/controlling/common/socket_nb.py"
 LAMBDA_FUNCTION="$AWS_DIR"/lambda_function.py
-COMMON_DEPS="$AWS_DIR"/common_deps
+COMMON_DEPS_TAR="$AWS_DIR"/common_deps.tar.gz
 APP=$(readlink -f "$1")
 
 cd "$SPROCKET_ROOT_S_PARENT"
@@ -51,8 +51,8 @@ for F in $SPROCKET_FILES; do
 done
 cd "$INITDIR"
 cp "$LAMBDA_FUNCTION" "$TMPDIR"
-cp -r "$COMMON_DEPS/"* "$TMPDIR"
-cp -r "$APP/"* "$TMPDIR"
+tar xzvf "$COMMON_DEPS_TAR" -C "$TMPDIR"
+cp -r "$APP/." "$TMPDIR"
 
 cd "$TMPDIR"
 zip -q -r "$ZIPFILE" .
