@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from sprocket.stages import FinalStateTemplate
 
 
 class Task(object):
@@ -42,3 +43,8 @@ class TaskStarter(object):
 
     def do_handle(self):
         raise Exception("TaskStarter can't handle any message, should have transitioned into a Task")
+
+
+class OrphanedTask(Task):
+    def __init__(self, *args, **kwargs):
+        super(OrphanedTask, self).__init__(None, FinalStateTemplate, None)

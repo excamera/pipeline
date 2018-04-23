@@ -22,7 +22,7 @@ from sprocket.platform.launcher import LaunchEvent
 from sprocket.config import settings
 from sprocket.controlling.common.network import listen_socket
 from sprocket.controlling.common.socket_nb import SocketNB
-from sprocket.controlling.tracker.task import TaskStarter
+from sprocket.controlling.tracker.task import TaskStarter, OrphanedTask
 from sprocket.util import lightlog
 from sprocket.util.misc import read_pem
 
@@ -191,29 +191,32 @@ class Tracker(object):
             for tsk in tasks:
                 if tsk.current_state.want_handle:
                     if isinstance(tsk, TaskStarter):
-                        try:
-                            # init msg lets us know which lambda function it's from
-                            init_msg = tsk.current_state.recv_queue.popleft()
-                            init_data = json.loads(init_msg)
-                            with Tracker.waiting_queues_lock:
-                                # so that we can get Task from the corresponding list
-                                real_task = Tracker.waiting_queues[init_data['lambda_function']].pop(0)
-                                if len(Tracker.waiting_queues[init_data['lambda_function']]) == 0:
+                        # init msg lets us know which lambda function it's from
+                        init_msg = tsk.current_state.recv_queue.popleft()
+                        init_data = json.loads(init_msg)
+                        with Tracker.waiting_queues_lock:
+                            # so that we can get Task from the corresponding list
+                            try:
+                                func_queue = Tracker.waiting_queues.get(init_data['lambda_function'], [])
+                                real_task = func_queue.pop(0)
+                                if len(func_queue) == 0:
                                     del Tracker.waiting_queues[init_data['lambda_function']]  # GC
-                            if 'lambda_start_ts' in init_data:
-                                logger = lightlog.getLogger(
-                                    real_task.kwargs['in_events'].values()[0]['metadata']['pipe_id'])
-                                logger.debug(ts=init_data['lambda_start_ts'],
-                                             lineage=real_task.kwargs['in_events'].values()[0]['metadata']['lineage'],
-                                             op='recv', msg='lambda_start_ts')
-                            real_task.rewire(tsk.current_state)  # transition to a Task
-                            fd_task_map[tsk.current_state.fileno()] = real_task
-                            tsk.current_state.update_flags()
-                            should_append.append(real_task)
-                            removable.append(tsk)
-                        except BaseException as e:
-                            logging.error(traceback.format_exc())
-                            removable.append(tsk)
+                                if 'lambda_start_ts' in init_data:
+                                    logger = lightlog.getLogger(
+                                        real_task.kwargs['in_events'].values()[0]['metadata']['pipe_id'])
+                                    logger.debug(ts=init_data['lambda_start_ts'],
+                                                 lineage=real_task.kwargs['in_events'].values()[0]['metadata'][
+                                                     'lineage'],
+                                                 op='recv', msg='lambda_start_ts')
+                            except IndexError:
+                                real_task = OrphanedTask()  # task doesn't exist
+                                logging.info("get an orphaned lambda function, sending quit")
+
+                        real_task.rewire(tsk.current_state)  # transition to a Task
+                        fd_task_map[tsk.current_state.fileno()] = real_task
+                        tsk.current_state.update_flags()
+                        should_append.append(real_task)
+                        removable.append(tsk)
             tasks.extend(should_append)
             for r in removable:
                 tasks.remove(r)
