@@ -32,8 +32,14 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
 
             for instream in request.inputstreams:
                 for input in instream.inputs:
+
+                    #solving edge case for initial event
+                    lineage = input.lineage
+                    if input.lineage == '':
+                        lineage = 1
+
                     in_event = {'key': input.uri,
-                                'metadata': {'pipe_id': pipe.pipe_id, 'lineage': input.lineage}}
+                                'metadata': {'pipe_id': pipe.pipe_id, 'lineage': lineage}}
                     pipe.inputs[instream.name][1].put({instream.type: in_event})
                     # put events to the buffer queue of all input stages
 
