@@ -1,0 +1,55 @@
+{
+  "nodes":[
+    {
+      "name": "streamlink",
+      "stage": "stream_link",
+      "config": {
+        "framesperchunk": "{fps}",
+        "filter": "[fps>=24]"
+      }
+    },
+    {
+      "name": "decode",
+      "stage": "decode_from_chunked_link",
+      "config": {
+      }
+    },
+    {
+      "name": "grayscale",
+      "stage": "grayscale_flat",
+      "config": {
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_frame_list",
+      "delivery_function": "serialized_frame_delivery_func",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:video_link",
+      "dst": "streamlink:video_link"
+    },
+    {
+      "src": "streamlink:chunked_link",
+      "dst": "decode:chunked_link"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "grayscale:frames"
+    },
+    {
+      "src": "grayscale:frame",
+      "dst": "encode:frame_list"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}
