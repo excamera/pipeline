@@ -36,7 +36,7 @@ class PipelineServer(pipeline_pb2_grpc.PipelineServicer):
                     #solving edge case for initial event
                     lineage = input.lineage
                     if input.lineage == '':
-                        lineage = 1
+                        lineage = str(1)
 
                     in_event = {'key': input.uri,
                                 'metadata': {'pipe_id': pipe.pipe_id, 'lineage': lineage}}
