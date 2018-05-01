@@ -43,6 +43,11 @@ class SchedulerBase(object):
                 raise Exception(str(len(error_tasks))+" tasks failed\n"+"\n".join(errmsgs))
             tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
 
+        
+            if hasattr(cls, 'get_quota'):
+                if cls.get_quota(pipeline) ==0: #if pipeline is sleeping
+                    deliver_empty = False
+
             if buffer_empty and deliver_empty and len(tasks) == 0:
                 break
 
@@ -64,6 +69,7 @@ class SchedulerBase(object):
     def stop(cls):
         cls.should_stop = True
 
+    
 
 class ThrottledScheduler(SchedulerBase):
 
