@@ -67,7 +67,7 @@ def serialized_scene_delivery_func(buffer_queues, deliver_queue, **kwargs):
                 current +=1
                 merged = merge_events(ordered_events[start:current], str(next_lineage))
                 deliver_queue.put(merged)
-                logging.info("delivered: %s", merged)
+                #logging.info("delivered: %s", merged)
                 start = current
                 next_lineage += 1
                 refreshed = True
@@ -86,6 +86,6 @@ def serialized_scene_delivery_func(buffer_queues, deliver_queue, **kwargs):
         # that're the only frames left, deliver
         merged = merge_events(ordered_events[start:], str(next_lineage))
         deliver_queue.put(merged)
-        logging.info("delivered leftover: %s", merged)
+        #logging.info("delivered leftover: %s", merged)
 
     stage_context['next_lineage'] = next_lineage

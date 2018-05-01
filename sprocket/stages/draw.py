@@ -148,8 +148,8 @@ class CollectState(CommandListState):
     nextState = ExtractTarState if settings.get('use_tar') else RunState
     commandlist = [
         (None, 'run:mkdir -p ##TMPDIR##/in_0/')
-        , ('OK:RETVAL(0)', 'collect:{pair_list} ##TMPDIR##/in_0')
-        , ('OK:COLLECT', None)
+        , ('OK:RETVAL(0)', 'collect_list:{pair_list}')
+        , ('OK:COLLECT_LIST', None)
     ]
 
     def __init__(self, prevState):
@@ -161,8 +161,7 @@ class CollectState(CommandListState):
 
         self.local['dir'] = '##TMPDIR##/out_0/'
 
-        params = {'pair_list': ' '.join(pair_list),
-                'boundingbox':self.in_events['frame']['metadata']['boundingbox']}
+        params = {'pair_list': ' '.join(pair_list)}
         logging.debug('params: '+str(params))
         self.commands = [ s.format(**params) if s is not None else None for s in self.commands ]
 
@@ -177,9 +176,10 @@ class InitState(InitStateTemplate):
         nframes =  self.in_events['frame']['nframes']
         lineage = int(self.in_events['frame']['metadata']['lineage'])
 
+
         if self.in_events['frame']['metadata']['rek'] == False:
             #populate for smart_serial delivery in encode
             self.nextState = TryNoRekEmitState
         else:
             #populate for smart_serial delivery in encode
-            self.nextState = RunState
+            self.nextState = CollectState#RunState
