@@ -47,6 +47,9 @@ class EmitState(OnePassState):
             if i in timeMarkers:
                 sceneChange = True
 
+            #assign a time
+            self.in_events['frames']['metadata']['time'] = float(t1) + float(i)*(1.0/float(fps))
+
             #mark the last piece as a scenechange as well
             if metadata['end'] and (i == len(self.local['key_list'])-1):
                 sceneChange = True

@@ -36,6 +36,10 @@ class EmitState(OnePassState):
             metadata['me'] = metadata['lineage']#for benchmarking
             metadata['boundingbox'] = self.local['output']
 
+            #access time of first frame like this
+            metadata['time']
+            #to figure out the time of frames after the first you would do something like
+            #metadata['time'] + i*1.0/fps
 
             self.emit_event('frame', {'metadata': metadata,
                     'key': self.local['key_list'][i],'number':i+1,
