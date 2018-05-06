@@ -5,7 +5,7 @@ import subprocess
 import sys
 import traceback
 from multiprocessing import TimeoutError
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from threading import Lock
 from time import sleep, time
 
@@ -272,7 +272,7 @@ def do_emit(msg, vals):
                     log.append('\n%f: finish uploading %s: %f seconds' % (end, f, end - start))
 
             try:
-                pool = Pool(vals['threadpool_s3'])
+                pool = ThreadPool(vals['threadpool_s3'])
                 results = pool.map_async(upload, filelist, chunksize=1)
 
                 while True:
@@ -350,43 +350,52 @@ def do_collect(msg, vals):
 
             objectlist = [o['Key'] for o in listed['Contents']]
 
-            working = {}
-            finished = {}
-            log = []
-            lock = Lock()
-            def download(o):
-                with lock:
-                    start = working[o] = time()
-                    log.append('%f: start downloading %s' % (start, o))
-                s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
-                with lock:
-                    end = time()
-                    finished[o] = end - start
-                    log.append('%f: finish downloading %s: %f seconds' % (end, o, end - start))
-
-            pool = Pool(vals.get('threadpool_s3'))
-            results = pool.map_async(download, objectlist, chunksize=1)
-
-            while True:
-                try:
-                    res = results.get(0.2)
-                    break
-                except TimeoutError:
-                    straggler_percentile, straggler_slowdown, straggler_delay = [float(v) for v in vals.get('straggler_configs', '0.9 2 1').split()]
-                    stragglers = []
+            if vals.get('threadpool_s3') >= 1:
+                working = {}
+                finished = {}
+                log = []
+                lock = Lock()
+                def download(o):
                     with lock:
-                        if len(finished) == len(objectlist):
-                            break
-                        if float(len(finished)) / len(objectlist) > straggler_percentile:
-                            average = sum(finished.values()) / len(finished)
-                            current = time()
-                            ongoing = [(tup[0], current-tup[1]) for tup in working.items() if tup[0] not in finished]
-                            donemsg += '\naverage: %f, working: %s' % (average, ongoing)
-                            stragglers = [tup[0] for tup in ongoing if tup[1] > average * straggler_slowdown + straggler_delay]
-                        if len(stragglers) > 0:
-                            donemsg += '\nadding speculative download: %s' % stragglers
-                            res = pool.map_async(download, stragglers, chunksize=1)
-            donemsg += '\ngot %d objects, collect log: %s' % (len(objectlist), log)
+                        start = working[o] = time()
+                        log.append('%f: start downloading %s' % (start, o))
+                    s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
+                    with lock:
+                        end = time()
+                        finished[o] = end - start
+                        log.append('%f: finish downloading %s: %f seconds' % (end, o, end - start))
+
+                pool = ThreadPool(vals.get('threadpool_s3', 2))
+                results = pool.map_async(download, objectlist, chunksize=1)
+
+                while True:
+                    try:
+                        res = results.get(0.2)
+                        break
+                    except TimeoutError:
+                        straggler_percentile, straggler_slowdown, straggler_delay = [float(v) for v in vals.get('straggler_configs', '0.9 2 1').split()]
+                        stragglers = []
+                        with lock:
+                            if len(finished) == len(objectlist):
+                                break
+                            if float(len(finished)) / len(objectlist) > straggler_percentile:
+                                average = sum(finished.values()) / len(finished)
+                                current = time()
+                                ongoing = [(tup[0], current-tup[1]) for tup in working.items() if tup[0] not in finished]
+                                donemsg += '\naverage: %f, working: %s' % (average, ongoing)
+                                stragglers = [tup[0] for tup in ongoing if tup[1] > average * straggler_slowdown + straggler_delay]
+                            if len(stragglers) > 0:
+                                donemsg += '\nadding speculative download: %s' % stragglers
+                                res = pool.map_async(download, stragglers, chunksize=1)
+                donemsg += '\ngot %d objects, collect log: %s' % (len(objectlist), log)
+
+            else:
+                for o in objectlist:
+                     try:
+                         s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
+                     except:
+                         donemsg = 'FAIL:COLLECT(%s->%s\n%s)' % (bucket+'/'+prefix+'/'+o, local_dir, traceback.format_exc())
+                         break
 
         except:
             donemsg = 'FAIL:COLLECT(%d objects from %s to %s\n%s)' % (len(listed.get('Contents', [])), 's3://' + bucket + '/...', local_dir, traceback.format_exc())
