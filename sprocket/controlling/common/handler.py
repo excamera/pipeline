@@ -5,7 +5,7 @@ import subprocess
 import sys
 import traceback
 from multiprocessing import TimeoutError
-from multiprocessing.pool import ThreadPool
+from multiprocessing import Pool
 from threading import Lock
 from time import sleep, time
 
@@ -272,7 +272,7 @@ def do_emit(msg, vals):
                     log.append('\n%f: finish uploading %s: %f seconds' % (end, f, end - start))
 
             try:
-                pool = ThreadPool(vals['threadpool_s3'])
+                pool = Pool(vals['threadpool_s3'])
                 results = pool.map_async(upload, filelist, chunksize=1)
 
                 while True:
@@ -364,7 +364,7 @@ def do_collect(msg, vals):
                     finished[o] = end - start
                     log.append('%f: finish downloading %s: %f seconds' % (end, o, end - start))
 
-            pool = ThreadPool(vals.get('threadpool_s3', 2))
+            pool = Pool(vals.get('threadpool_s3'))
             results = pool.map_async(download, objectlist, chunksize=1)
 
             while True:
