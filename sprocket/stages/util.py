@@ -1,7 +1,9 @@
 #!/usr/bin/python
 import time
 
+from sprocket.config import settings
 from sprocket.util import lightlog
+from sprocket.util.misc import rand_str
 
 
 def default_trace_func(in_events, msg, op, **kwargs):
@@ -40,3 +42,9 @@ def preprocess_config(config, existing):
         except:
             new_config[k] = v
     return new_config
+
+def get_output_key():
+    if settings.get('hash_bucket'):
+        return settings['temp_storage_base'] + rand_str(1) + '/' + rand_str(16) + '/'
+    else:
+        return settings['storage_base'] + rand_str(16) + '/'
