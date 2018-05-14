@@ -28,6 +28,7 @@ class MachineState(SocketNB):
             self.stateinfo = prevState.stateinfo
             self.info = prevState.info
             self.actorNum = prevState.actorNum
+            self.task = prevState.task
         else:
             # first time we're being initialized
             self.prevState = None
@@ -37,6 +38,7 @@ class MachineState(SocketNB):
             self.pipe = kwargs.get('pipe', {})
             self.trace_func = kwargs.get('trace_func')
             self.actorNum = kwargs.get('actorNum')
+            self.task = kwargs.get('task')
             self.local = {}
             self.timestamps = []
             self.stateinfo = []

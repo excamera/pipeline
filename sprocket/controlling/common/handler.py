@@ -255,7 +255,7 @@ def do_emit(msg, vals):
     
         filelist = os.listdir(local_dir)
     
-        donemsg = 'OK:EMIT(%s->%s), send %d objects' % (local_dir, msg.split(' ', 1)[1], len(filelist))
+        donemsg = 'OK:EMIT(%s), send %d objects' % (msg.split(' ', 1)[0], len(filelist)) # original path is returned
 
         if protocol == 's3':
             retval = 0
@@ -347,7 +347,7 @@ def do_collect(msg, vals):
         protocol = msg.split(' ', 1)[0].split('://', 1)[0]
         key = msg.split(' ', 1)[0].split('://', 1)[1]
 
-        donemsg = 'OK:COLLECT(%s->%s)' % (msg.split(' ', 1)[0], local_dir)
+        donemsg = 'OK:COLLECT(%s)' % (msg.split(' ', 1)[1])
         if protocol == 's3':
             retval = 0
             bucket = key.split('/', 1)[0]
