@@ -87,5 +87,5 @@ class FinalStateTemplate(OnePassState):
     command = "quit:"
     nextState = TerminalState
 
-    def __init__(self, prevState):
+    def __init__(self, prevState, **kwargs):
         super(FinalStateTemplate, self).__init__(prevState)
