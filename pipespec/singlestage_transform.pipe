@@ -1,0 +1,23 @@
+{
+  "nodes":[
+    {
+      "name": "transform",
+      "stage": "C_C_speculative_transform",
+      "config": {
+        "transform": "-vf convolution='0 1 0 1 -4 1 0 1 0:0 1 0 1 -4 1 0 1 0:0 1 0 1 -4 1 0 1 0:0 1 0 1 -4 1 0 1 0:5:5:5:1:0:128:128:128'"
+      }
+    }  
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:chunks",
+      "dst": "transform:chunks"
+    },
+    {
+      "src": "transform:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+}

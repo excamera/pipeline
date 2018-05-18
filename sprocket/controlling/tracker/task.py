@@ -18,7 +18,7 @@ class Task(object):
                                                                  ':' + self.current_state.__class__.__name__
 
     def rewire(self, ns):
-        self.current_state = self.constructor(ns, **self.kwargs)
+        self.current_state = self.constructor(ns, task=self, **self.kwargs)
 
     def do_handle(self):
         self.current_state = self.current_state.do_handle()
@@ -29,6 +29,8 @@ class Task(object):
     def do_write(self):
         self.current_state = self.current_state.do_write()
 
+    def send_async_msg(self, msg):
+        self.current_state.outofband_msg(msg)
 
 class TaskStarter(object):
     def __init__(self, ns):

@@ -141,6 +141,10 @@ class SocketNB(object):
     def format_message(msg):
         return Defs.header_fmt % (len(msg), msg)
 
+    def outofband_msg(self, msg):
+        self.recv_queue.append(msg)
+        self.update_flags()
+
     def dequeue(self):
         if len(self.recv_queue) == 0:
             return None

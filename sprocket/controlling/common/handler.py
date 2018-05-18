@@ -97,7 +97,11 @@ def _background(runner, vals, queuemsg):
             os.close(r)
             sock = FDWrapper(w)
 
-    (donemsg, retval) = runner()
+    try:
+        (donemsg, retval) = runner()
+    except:
+        donemsg = "FAIL: %s" % traceback.format_exc()
+        retval = 1
 
     if sock is None:
         if vals.get('cmdsock') is not None:
@@ -241,85 +245,92 @@ def do_emit(msg, vals):
     URI := s3://key (key includes bucket name) | redis://key | file://local_dir (file:// needs a relay server or NAT traverse)
     """
 
-    local_dir = msg.split(' ', 1)[0]
-    local_dir = local_dir.replace("##TMPDIR##", vals['_tmpdir'])
-    local_dir = local_dir.rstrip('/')
+    def ret_helper():
+        local_dir = msg.split(' ', 1)[0]
+        local_dir = local_dir.replace("##TMPDIR##", vals['_tmpdir'])
+        local_dir = local_dir.rstrip('/')
+    
+        protocol = msg.split(' ', 1)[1].split('://', 1)[0]
+        key = msg.split(' ', 1)[1].split('://', 1)[1]
+    
+        filelist = os.listdir(local_dir)
+    
+        donemsg = 'OK:EMIT(%s), send %d objects' % (msg.split(' ', 1)[0], len(filelist)) # original path is returned
 
-    protocol = msg.split(' ', 1)[1].split('://', 1)[0]
-    key = msg.split(' ', 1)[1].split('://', 1)[1]
+        if protocol == 's3':
+            retval = 0
+            bucket = key.split('/', 1)[0]
+            prefix = key.split('/', 1)[1].rstrip('/')
 
-    filelist = os.listdir(local_dir)
+            if vals.get('threadpool_s3') >= 1:
+                working = {}
+                finished = {}
+                log = []
+                lock = Lock()
+                def upload(f):
+                    with lock:
+                        start = working[f] = time()
+                        log.append('\n%f: start uploading %s' % (start, f))
+                    s3_client.upload_file(local_dir + '/' + f, bucket, prefix + '/' + f)
+                    with lock:
+                        end = time()
+                        finished[f] = end - start
+                        log.append('\n%f: finish uploading %s: %f seconds' % (end, f, end - start))
 
-    donemsg = 'OK:EMIT(%s->%s), send %d objects' % (local_dir, msg.split(' ', 1)[1], len(filelist))
+                try:
+                    pool = ThreadPool(vals['threadpool_s3'])
+                    results = pool.map_async(upload, filelist, chunksize=1)
 
-    if protocol == 's3':
-        bucket = key.split('/', 1)[0]
-        prefix = key.split('/', 1)[1].rstrip('/')
+                    while True:
+                        try:
+                            res = results.get(0.2)
+                            break
+                        except TimeoutError:
+                            # find out any stragglers:
+                            straggler_percentile, straggler_slowdown, straggler_delay = [float(v) for v in vals.get('straggler_configs', '0.9 2 1').split()]
+                            stragglers = []
+                            with lock:
+                                if len(finished) == len(filelist):
+                                    break
+                                if float(len(finished)) / len(filelist) > straggler_percentile:
+                                    average = sum(finished.values()) / len(finished)
+                                    current = time()
+                                    ongoing = [(tup[0], current-tup[1]) for tup in working.items() if tup[0] not in finished]
+                                    donemsg += '\naverage: %f, working: %s' % (average, ongoing)
+                                    stragglers = [tup[0] for tup in ongoing if tup[1] > average * straggler_slowdown + straggler_delay]
+                                if len(stragglers) > 0:
+                                    donemsg += '\nadding speculative upload: %s' % stragglers
+                                    res = pool.map_async(upload, stragglers, chunksize=1)
 
-        if vals.get('threadpool_s3') >= 1:
-            working = {}
-            finished = {}
-            log = []
-            lock = Lock()
-            def upload(f):
-                with lock:
-                    start = working[f] = time()
-                    log.append('\n%f: start uploading %s' % (start, f))
-                s3_client.upload_file(local_dir + '/' + f, bucket, prefix + '/' + f)
-                with lock:
-                    end = time()
-                    finished[f] = end - start
-                    log.append('\n%f: finish uploading %s: %f seconds' % (end, f, end - start))
+                    donemsg += '\nemit log: ' + str(log)
+                except:
+                    donemsg = 'FAIL:EMIT(%s->%s\n%s)' % (local_dir, bucket+'/'+prefix+'/...', traceback.format_exc())
+                    retval = 1
 
-            try:
-                pool = ThreadPool(vals['threadpool_s3'])
-                results = pool.map_async(upload, filelist, chunksize=1)
-
-                while True:
+            else:
+                for f in filelist:
                     try:
-                        res = results.get(0.2)
+                        s3_client.upload_file(local_dir+'/'+f, bucket, prefix+'/'+f)
+                    except:
+                        donemsg = 'FAIL:EMIT(%s->%s\n%s)' % (local_dir, bucket+'/'+prefix+'/'+f, traceback.format_exc())
+                        retval = 1
                         break
-                    except TimeoutError:
-                        # find out any stragglers:
-                        straggler_percentile, straggler_slowdown, straggler_delay = [float(v) for v in vals.get('straggler_configs', '0.9 2 1').split()]
-                        stragglers = []
-                        with lock:
-                            if len(finished) == len(filelist):
-                                break
-                            if float(len(finished)) / len(filelist) > straggler_percentile:
-                                average = sum(finished.values()) / len(finished)
-                                current = time()
-                                ongoing = [(tup[0], current-tup[1]) for tup in working.items() if tup[0] not in finished]
-                                donemsg += '\naverage: %f, working: %s' % (average, ongoing)
-                                stragglers = [tup[0] for tup in ongoing if tup[1] > average * straggler_slowdown + straggler_delay]
-                            if len(stragglers) > 0:
-                                donemsg += '\nadding speculative upload: %s' % stragglers
-                                res = pool.map_async(upload, stragglers, chunksize=1)
 
-                donemsg += '\nemit log: ' + str(log)
-            except:
-                donemsg = 'FAIL:EMIT(%s->%s\n%s)' % (local_dir, bucket+'/'+prefix+'/...', traceback.format_exc())
+        elif protocol == 'redis':
+            donemsg = 'redis: not implemented yet'
+            retval = 1
+
+        elif protocol == 'file':
+            donemsg = 'file: not implemented yet'
+            retval = 1
 
         else:
-            for f in filelist:
-                try:
-                    s3_client.upload_file(local_dir+'/'+f, bucket, prefix+'/'+f)
-                except:
-                    donemsg = 'FAIL:EMIT(%s->%s\n%s)' % (local_dir, bucket+'/'+prefix+'/'+f, traceback.format_exc())
-                    break
+            donemsg = 'FAIL(unknown protocol: %s)' % protocol
+            retval = 1
 
-    elif protocol == 'redis':
-        raise Exception('not implemented yet')
+        return (donemsg, retval)
 
-    elif protocol == 'file':
-        raise Exception('not implemented yet')
-
-    else:
-        donemsg = 'FAIL(unknown protocol: %s)' % protocol
-
-    if vals.get('cmdsock') is not None:
-        vals['cmdsock'].enqueue(donemsg)
-    return False
+    return _background(ret_helper, vals, 'OK:EMITTING')
 
 
 def do_collect(msg, vals):
@@ -327,93 +338,100 @@ def do_collect(msg, vals):
     msg := URI local_dir_to_store
     URI := s3://key (key includes bucket name) | redis://key | file://worker_id/local_dir (file:// needs a relay server or NAT traverse)
     """
-    local_dir = msg.split(' ', 1)[1]
-    local_dir = local_dir.replace("##TMPDIR##", vals['_tmpdir'])
-    local_dir = local_dir.rstrip('/')
 
-    protocol = msg.split(' ', 1)[0].split('://', 1)[0]
-    key = msg.split(' ', 1)[0].split('://', 1)[1]
+    def ret_helper():
+        local_dir = msg.split(' ', 1)[1]
+        local_dir = local_dir.replace("##TMPDIR##", vals['_tmpdir'])
+        local_dir = local_dir.rstrip('/')
 
-    donemsg = 'OK:COLLECT(%s->%s)' % (msg.split(' ', 1)[0], local_dir)
+        protocol = msg.split(' ', 1)[0].split('://', 1)[0]
+        key = msg.split(' ', 1)[0].split('://', 1)[1]
 
-    if protocol == 's3':
-        bucket = key.split('/', 1)[0]
-        prefix = key.split('/', 1)[1].rstrip('/')
+        donemsg = 'OK:COLLECT(%s)' % (msg.split(' ', 1)[1])
+        if protocol == 's3':
+            retval = 0
+            bucket = key.split('/', 1)[0]
+            prefix = key.split('/', 1)[1].rstrip('/')
 
-        listed = {}
-        try:
-            while True:
-                listed = s3_client.list_objects(Bucket=bucket, Prefix=prefix)
-                if listed.has_key('Contents'):
-                    break
-                sleep(0.5)
-
-            objectlist = [o['Key'] for o in listed['Contents']]
-
-            if vals.get('threadpool_s3') >= 1:
-                working = {}
-                finished = {}
-                log = []
-                lock = Lock()
-                def download(o):
-                    with lock:
-                        start = working[o] = time()
-                        log.append('%f: start downloading %s' % (start, o))
-                    s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
-                    with lock:
-                        end = time()
-                        finished[o] = end - start
-                        log.append('%f: finish downloading %s: %f seconds' % (end, o, end - start))
-
-                pool = ThreadPool(vals.get('threadpool_s3', 2))
-                results = pool.map_async(download, objectlist, chunksize=1)
-
+            listed = {}
+            try:
                 while True:
-                    try:
-                        res = results.get(0.2)
+                    listed = s3_client.list_objects(Bucket=bucket, Prefix=prefix)
+                    if listed.has_key('Contents'):
                         break
-                    except TimeoutError:
-                        straggler_percentile, straggler_slowdown, straggler_delay = [float(v) for v in vals.get('straggler_configs', '0.9 2 1').split()]
-                        stragglers = []
+                    sleep(0.2)
+
+                objectlist = [o['Key'] for o in listed['Contents']]
+
+                if vals.get('threadpool_s3') >= 1:
+                    working = {}
+                    finished = {}
+                    log = []
+                    lock = Lock()
+                    def download(o):
                         with lock:
-                            if len(finished) == len(objectlist):
-                                break
-                            if float(len(finished)) / len(objectlist) > straggler_percentile:
-                                average = sum(finished.values()) / len(finished)
-                                current = time()
-                                ongoing = [(tup[0], current-tup[1]) for tup in working.items() if tup[0] not in finished]
-                                donemsg += '\naverage: %f, working: %s' % (average, ongoing)
-                                stragglers = [tup[0] for tup in ongoing if tup[1] > average * straggler_slowdown + straggler_delay]
-                            if len(stragglers) > 0:
-                                donemsg += '\nadding speculative download: %s' % stragglers
-                                res = pool.map_async(download, stragglers, chunksize=1)
-                donemsg += '\ngot %d objects, collect log: %s' % (len(objectlist), log)
+                            start = working[o] = time()
+                            log.append('%f: start downloading %s' % (start, o))
+                        s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
+                        with lock:
+                            end = time()
+                            finished[o] = end - start
+                            log.append('%f: finish downloading %s: %f seconds' % (end, o, end - start))
 
+                    pool = ThreadPool(vals.get('threadpool_s3', 2))
+                    results = pool.map_async(download, objectlist, chunksize=1)
+
+                    while True:
+                        try:
+                            res = results.get(0.2)
+                            break
+                        except TimeoutError:
+                            straggler_percentile, straggler_slowdown, straggler_delay = [float(v) for v in vals.get('straggler_configs', '0.9 2 1').split()]
+                            stragglers = []
+                            with lock:
+                                if len(finished) == len(objectlist):
+                                    break
+                                if float(len(finished)) / len(objectlist) > straggler_percentile:
+                                    average = sum(finished.values()) / len(finished)
+                                    current = time()
+                                    ongoing = [(tup[0], current-tup[1]) for tup in working.items() if tup[0] not in finished]
+                                    donemsg += '\naverage: %f, working: %s' % (average, ongoing)
+                                    stragglers = [tup[0] for tup in ongoing if tup[1] > average * straggler_slowdown + straggler_delay]
+                                if len(stragglers) > 0:
+                                    donemsg += '\nadding speculative download: %s' % stragglers
+                                    res = pool.map_async(download, stragglers, chunksize=1)
+                    donemsg += '\ngot %d objects, collect log: %s' % (len(objectlist), log)
+
+                else:
+                    for o in objectlist:
+                         try:
+                             s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
+                         except:
+                             donemsg = 'FAIL:COLLECT(%s->%s\n%s)' % (bucket+'/'+prefix+'/'+o, local_dir, traceback.format_exc())
+                             retval = 1
+                             break
+
+            except:
+                donemsg = 'FAIL:COLLECT(%d objects from %s to %s\n%s)' % (len(listed.get('Contents', [])), 's3://' + bucket + '/...', local_dir, traceback.format_exc())
+                retval = 1
             else:
-                for o in objectlist:
-                     try:
-                         s3_client.download_file(bucket, o, local_dir+'/'+o.split('/')[-1])
-                     except:
-                         donemsg = 'FAIL:COLLECT(%s->%s\n%s)' % (bucket+'/'+prefix+'/'+o, local_dir, traceback.format_exc())
-                         break
+                pass
 
-        except:
-            donemsg = 'FAIL:COLLECT(%d objects from %s to %s\n%s)' % (len(listed.get('Contents', [])), 's3://' + bucket + '/...', local_dir, traceback.format_exc())
+        elif protocol == 'redis':
+            donemsg = 'redis: not implemented yet'
+            retval = 1
+
+        elif protocol == 'file':
+            donemsg = 'file: not implemented yet'
+            retval = 1
+
         else:
-            pass
+            donemsg = 'FAIL(unknown protocol: %s)' % protocol
+            retval = 1
 
-    elif protocol == 'redis':
-        donemsg = 'FAIL(unknown protocol: %s)' % protocol
+        return (donemsg, retval)
 
-    elif protocol == 'file':
-        donemsg = 'FAIL(unknown protocol: %s)' % protocol
-
-    else:
-        donemsg = 'FAIL(unknown protocol: %s)' % protocol
-
-    if vals.get('cmdsock') is not None:
-        vals['cmdsock'].enqueue(donemsg)
-    return False
+    return _background(ret_helper, vals, 'OK:COLLECTING')
 
 
 def do_emit_list(msg, vals):
