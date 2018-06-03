@@ -33,6 +33,12 @@ class SchedulerBase(object):
             if cls.submit_tasks(pipeline, tasks) != 0:
                 deliver_empty = False
 
+            if hasattr(cls, 'get_quota'):
+                if cls.get_quota(pipeline) ==0: #if pipeline is sleeping
+                    deliver_empty = False
+                elif not cls.get_deliverQueueEmpty(pipeline):
+                    deliver_empty = False
+
             error_tasks = [t for t in tasks if isinstance(t.current_state, ErrorState)]
             if len(error_tasks) > 0:
                 logging.error(str(len(error_tasks))+" tasks failed: ")
@@ -42,11 +48,6 @@ class SchedulerBase(object):
                     errmsgs.append(et.current_state.str_extra())
                 raise Exception(str(len(error_tasks))+" tasks failed\n"+"\n".join(errmsgs))
             tasks = [t for t in tasks if not isinstance(t.current_state, TerminalState)]
-
-        
-            if hasattr(cls, 'get_quota'):
-                if cls.get_quota(pipeline) ==0: #if pipeline is sleeping
-                    deliver_empty = False
 
             if buffer_empty and deliver_empty and len(tasks) == 0:
                 break
