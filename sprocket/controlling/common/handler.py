@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import signal
 import subprocess
 import sys
 import traceback
@@ -94,8 +95,24 @@ def _background(runner, vals, queuemsg):
             return False
 
         else:
+            def on_sigterm(signum, _):
+                p = vals.get('popen')
+                if p.poll() is None:
+                    try:
+                        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+                        while True:
+                            try:
+                                os.waitpid(-p.pid)
+                            except:
+                                break
+                    except:
+                        pass
+                sys.exit(0)
+                
+            signal.signal(signal.SIGTERM, on_sigterm)
             os.close(r)
             sock = FDWrapper(w)
+
 
     try:
         (donemsg, retval) = runner()
@@ -177,6 +194,17 @@ def do_echo(msg, vals):
 ###
 def do_quit(_, vals):
     vals['cmdsock'].close()
+    for pid, sock in vals.setdefault('runinfo', []):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except:
+            pass
+    for pid, sock in vals.setdefault('runinfo', []):
+        try:
+            os.waitpid(pid, 0)
+            sock.close()
+        except:
+            pass
     return True
 
 ###
@@ -188,12 +216,14 @@ def do_run(msg, vals):
     def ret_helper():
         retval = 0
         try:
-            output = subprocess.check_output([cmdstring], shell=True, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            retval = e.returncode
-            output = e.output
-
-        donemsg = 'OK:RETVAL(%d):OUTPUT(%s):COMMAND(%s)' % (retval, output, cmdstring)
+            p = subprocess.Popen([cmdstring], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            vals['popen'] = p
+            p.wait()
+            retval = p.returncode
+            donemsg = 'OK:RETVAL(%d):OUTPUT(%s):COMMAND(%s)' % (retval, p.stdout.read().strip(), cmdstring)
+        except Exception as e:
+            donemsg = 'FAIL:RUN %s' % str(e)
+            retval = 1
 
         return (donemsg, retval)
 
