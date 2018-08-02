@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 import logging
+import copy
 import pdb
 
 from sprocket.controlling.tracker.machine_state import TerminalState, CommandListState, OnePassState, IfElseState, ErrorState
@@ -15,7 +16,7 @@ class StartEmitSteal(OnePassState):
     command = 'emit:##TMPDIR##/out_1/ {out_key}'
     def __init__(self, prevState):
         super(StartEmitSteal, self).__init__(prevState)
-        params = {'out_key': self.local['out_key']}
+        params = {'out_key': self.local['out_key2']}
         self.command = self.command.format(**params) if self.command is not None else None
 
 
@@ -28,22 +29,46 @@ class WaitForEmitAndStealWork(OnePassState):
     def post_transition(self):
         def peer_finished(_):
             self.local['peer_finished'] = True
-            if self.local.get('own_finished'):
+            if self.local.get('emit_finished'):
                 return FinalState
             return WaitForEmitAndStealWork
         def emit_finished(_):
-            self.emit_event('chunks', {'metadata': self.in_events['chunks']['metadata'], 'key': self.local['out_key']})
-            if self.local.get('steal_work'):
+            self.local['emit_finished'] = True
+            starttime = int(self.in_events['chunks']['metadata']['lineage'])-1
+            metadata = copy.deepcopy(self.in_events['chunks']['metadata'])
+            metadata['end'] = self.in_events['chunks']['metadata']['lineage']=='34'
+            self.emit_event('frames', {'metadata': metadata, 'key': self.local['out_key'], 'nframes':24
+                , 'seconds': (starttime,starttime+1), 'me':self.in_events['chunks']['metadata']['lineage']})
+            if (self.local.get('steal_work') and not self.local.get('steal_finished')) or (self.local.get('emit_steal_work') and not self.local.get('emit_steal_finished')):
                 return WaitForEmitAndStealWork
             return FinalState
+        def steal_finished(_):
+            self.local['steal_finished'] = True
+            if self.local.get('peer_finished'):
+                if self.local.get('emit_finished'):
+                    return FinalState
+                return WaitForEmitAndStealWork
+            self.local['emit_steal_work'] = True
+            return StartEmitSteal
         def emit_steal_finished(_):
-            self.emit_event('chunks', {'metadata': self.in_events['chunks']['metadata'], 'steal_work': True, 'key': self.local['out_key']})
+            self.local['emit_steal_finished'] = True
+            if self.local.get('peer_finished'):
+                if self.local.get('emit_finished'):
+                    return FinalState
+                return WaitForEmitAndStealWork
             peer_lineage = self.local['lineage'] + 1 if self.local['relative_pos'] == 0 else self.local['lineage'] - 1
+            starttime = int(peer_lineage)-1
+            metadata = copy.deepcopy(self.in_events['chunks']['metadata'])
+            metadata['lineage'] = str(peer_lineage)
+            metadata['end'] = self.in_events['chunks']['metadata']['lineage']=='34'
+            self.emit_event('frames', {'metadata': metadata, 'key': self.local['out_key2'], 'nframes':24, 'starttime':(starttime,starttime+1), 'me': str(peer_lineage), 'end':str(peer_lineage)=='34', 'seconds':(peer_lineage-1, peer_lineage)})
             peer = self.pipe['tasks'].get(peer_lineage)
             if peer:
                 peer.send_async_msg('OK:PEER_FINISH_2')
-            return FinalState
-        message_types = {'OK:RETVAL(0)': lambda _: StartEmitSteal,
+            if self.local.get('emit_finished'):
+                return FinalState
+            return WaitForEmitAndStealWork
+        message_types = {'OK:RETVAL(0)': steal_finished,
                          'OK:EMIT(##TMPDIR##/out_0': emit_finished,
                          'OK:EMIT(##TMPDIR##/out_1': emit_steal_finished,
                          'OK:EMITTING': lambda _: WaitForEmitAndStealWork,
@@ -61,7 +86,7 @@ StartEmitSteal.nextState = WaitForEmitAndStealWork
 class StartEmitAndStealwork(CommandListState):
     nextState = WaitForEmitAndStealWork
     commandlist = [(None, 'emit:##TMPDIR##/out_0/ {out_key}'),
-                   (None, 'run:./ffmpeg -y -ss {starttime} -t 1 -i $(find ##TMPDIR##/in_0/ -name "*mp4"|head -n1) {transform} ##TMPDIR##/out_1/peer_output.mp4')]
+                   (None, 'run:./ffmpeg -y -ss {starttime} -t 1 -i $(find ##TMPDIR##/in_0/ -name "*mp4"|head -n1) {transform} ##TMPDIR##/out_1/%08d.png')]
 
     def __init__(self, prevState):
         super(StartEmitAndStealwork, self).__init__(prevState)
@@ -87,7 +112,6 @@ class WaitForRun(OnePassState):
 
     def post_transition(self):
         def finishrun(_):
-            self.local['own_finished'] = True
             peer_lineage = self.local['lineage'] + 1 if self.local['relative_pos'] == 0 else self.local['lineage'] - 1
             peer = self.pipe['tasks'].get(peer_lineage)
             if peer:
@@ -115,13 +139,14 @@ class WaitForRun(OnePassState):
 
 class StartRun(OnePassState):
     expect = None
-    command = 'run:./ffmpeg -y -ss {starttime} -t 1 -i $(find ##TMPDIR##/in_0/ -name "*mp4"|head -n1) {transform} ##TMPDIR##/out_0/own_output.mp4'
+    command = 'run:sleep {delay}; ./ffmpeg -y -ss {starttime} -t 1 -i $(find ##TMPDIR##/in_0/ -name "*mp4"|head -n1) {transform} ##TMPDIR##/out_0/%08d.png'
     nextState = WaitForRun
 
     def __init__(self, prevState):
         super(StartRun, self).__init__(prevState)
         self.local['out_key'] = util.get_output_key()
-        params = {'key': self.in_events['chunks']['key'], 'out_key': self.local['out_key'],
+
+        params = {'delay': 30 if self.local['lineage']==10 and self.config.get('create_straggler') else 0, 'key': self.in_events['chunks']['key'], 'out_key': self.local['out_key'],
                   'transform': self.config.get('transform', '-vf null'), 'starttime': self.local['relative_pos']}
         self.command = self.command.format(**params) if self.command is not None else None
 
@@ -151,7 +176,7 @@ class WaitForCollect(OnePassState):
 class SetupState(CommandListState):
     extra = "(run)"
     nextState = WaitForCollect
-    commandlist = [(None, 'run:mkdir -p ##TMPDIR##/in_0/ ##TMPDIR##/out_0/ ##TMPDIR##/out_1/')
+    commandlist = [(None, 'run:ps -eTf|grep "python\|ffmpeg"; mkdir -p ##TMPDIR##/in_0/ ##TMPDIR##/out_0/ ##TMPDIR##/out_1/')
         , ('OK:RETVAL(0)', 'seti:nonblock:1')
         , ('OK:SETI', 'collect:{key} ##TMPDIR##/in_0')]
 
@@ -159,6 +184,7 @@ class SetupState(CommandListState):
     def __init__(self, prevState):
         super(SetupState, self).__init__(prevState)
         self.local['out_key'] = util.get_output_key()
+        self.local['out_key2'] = util.get_output_key()
         params = {'key': self.in_events['chunks']['key'], 'out_key': self.local['out_key'],
                   'transform': self.config.get('transform', '-vf null'), 'own_starttime': self.local['relative_pos']}
         self.commands = [s.format(**params) if s is not None else None for s in self.commands]
@@ -169,7 +195,9 @@ class InitState(InitStateTemplate):
 
     def __init__(self, prevState, **kwargs):
         super(InitState, self).__init__(prevState, **kwargs)
-        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='C_C_speculative_transform')
+        self.in_events['chunks']['metadata']['fps'] = 24
+        self.trace_func = lambda ev, msg, op: default_trace_func(ev, msg, op, stage='C_F_stealwork_transform')
+        self.local['peer_finished'] = not self.config.get('stealwork')
         self.local['lineage'] = int(self.in_events['chunks']['metadata']['lineage'])
         tasks = self.pipe.setdefault('tasks', {})
         tasks[self.local['lineage']] = self.task

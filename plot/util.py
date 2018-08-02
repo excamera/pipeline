@@ -78,6 +78,6 @@ def get_intervals(lineages, start_selector, end_selector, start_index=None, end_
                 intervals[lineage] = end_points[end_index]['ts'] - start_points[start_index]['ts']
 
         else:
-            print('not enough points found', file=sys.stderr)
+            print('not enough points found for lineage: '+str(lineage), file=sys.stderr)
 
     return intervals

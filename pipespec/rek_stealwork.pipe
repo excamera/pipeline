@@ -1,0 +1,79 @@
+{
+  "nodes":[
+    {
+      "name": "matchFace",
+      "stage": "matchFace",
+      "config": {
+      }
+    },
+    {
+      "name": "decode",
+      "stage": "C_F_stealwork_decode",
+      "config": {
+        "stealwork": true,
+        "create_straggler": true,
+        "transform": "-f image2 -c:v png -start_number 1"
+      }
+    },
+    {
+      "name": "scenechange",
+      "stage": "scenechange",
+      "config": {
+      }
+    },
+    {
+      "name": "rek",
+      "stage": "rek",
+      "delivery_function": "serialized_scene_delivery_func",
+      "config": {
+      }
+    },
+    {
+      "name": "draw",
+      "stage": "draw",
+      "delivery_function": "serialized_scene_delivery_func",
+      "config": {
+      }
+    },
+    {
+      "name": "encode",
+      "stage": "encode_frame_list",
+      "delivery_function": "serialized_frame_delivery_func",
+      "config": {
+      }
+    }
+  ],
+
+  "streams":
+  [
+    {
+      "src": "input_0:chunks",
+      "dst": "decode:chunks"
+    },
+    {
+      "src": "input_1:person",
+      "dst": "matchFace:person"
+    },
+    {
+      "src": "decode:frames",
+      "dst": "scenechange:frames"
+    },
+    {
+      "src": "scenechange:scene_list",
+      "dst": "rek:scene_list"
+    },
+    {
+      "src": "rek:frame",
+      "dst": "draw:frame"
+    },
+    {
+      "src": "draw:frame",
+      "dst": "encode:frame_list"
+    },
+    {
+      "src": "encode:chunks",
+      "dst": "output_0:chunks"
+    }
+  ]
+
+}

@@ -3,10 +3,10 @@ import argparse
 import pdb
 import matplotlib.pyplot as plt
 
-from plot_CDF import plot_CDF
+from plot_lineages import plot_lineages as plot_CDF
 
 def test_straggler_mitigation(job):
-    plot_CDF("logs/"+job[1]+"/log_pb", lambda _,r: 'invocation' in r['msg'] and r['op']=='send' and int(r['lineage']) <=34, lambda _,r: 'quit' in r['msg'] and r['op']=='send' and int(r['lineage']) <=34, start_index=0, end_index=-1, label=job[0])
+    return plot_CDF("logs/"+job[1]+"/log_pb", lambda _,r: 'invocation' in r['msg'] and r['op']=='send' and int(r['lineage']) <=33, lambda _,r: 'quit' in r['msg'] and r['op']=='send' and int(r['lineage']) <=33, start_index=0, end_index=-1, label=job[0], color='#3a75ae' if job[0]=='wo' else '#ef8635')
 
 def total(job):
     plot_CDF("logs/"+job[1]+"/log_pb", lambda _,r: 'invocation' in r['msg'] and r['op']=='send', lambda _,r: 'quit' in r['msg'] and r['op']=='send', start_index=0, end_index=-1, label=job[0])
@@ -56,12 +56,13 @@ if __name__ == '__main__':
 
     jobs = [l.split() for l in stdin.readlines()]
 
-    for j in jobs:
-        globals()[args.range](j)
+    handles = [globals()[args.range](j) for j in jobs]
 
-    plt.xlabel(args.range + ' time (s)')
-    plt.grid(which='both')
-    plt.legend()
+    plt.xlabel('chunk #')
+    plt.ylabel('time (s)')
+    #plt.grid(which='both')
+    plt.legend((handles[0][0], handles[-1][0]),('w/o straggler mitigation', 'w/ straggler mitigation'))
     plt.xlim(xmin=0.0)
-    plt.show()
+    #plt.show()
+    plt.savefig('/tmp/straggler.pdf')
 

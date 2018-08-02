@@ -27,7 +27,6 @@ class EmitState(OnePassState):
 
     def post_transition(self):
 
-
         for i in xrange(len(self.local['key_list'])):
 
             metadata = self.in_events['scene_list']['metadata']
@@ -70,7 +69,7 @@ class GetOutputState(OnePassState):
 
         self.local['output'] = matchBox
 
-        if str(matchBox) == "False\n":
+        if str(matchBox) == "False":
             self.local['rek'] = False
         else:
             self.local['rek'] = True
