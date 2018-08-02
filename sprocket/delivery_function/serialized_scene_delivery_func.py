@@ -37,6 +37,7 @@ def serialized_scene_delivery_func(buffer_queues, deliver_queue, **kwargs):
     expecting = stage_context.get('expecting', 1)  # expecting lineage
     next_lineage = stage_context.get('next_lineage', 1)
     config = preprocess_config(stage_conf, {'fps': metadata['fps']})
+    framesperchunk = config.get('framesperchunk',metadata['fps'])
 
     lst = []
     while not buffer_queues.values()[0].empty():
@@ -58,10 +59,12 @@ def serialized_scene_delivery_func(buffer_queues, deliver_queue, **kwargs):
                 expecting+=1
 
             #if this isnt a scenechange, add it to the scene
-            if not bool(ordered_events[current].values()[0]['switch']):
+            if not bool(ordered_events[current].values()[0]['switch']) \
+                    and current != (framesperchunk - 1): #send 2*frames per chunk regardless TODO 
                 current +=1
-
                 continue
+           
+
             else:  # enough frames, merge and go!
 
                 current +=1
