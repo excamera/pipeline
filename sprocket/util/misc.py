@@ -11,21 +11,11 @@ import sprocket.controlling.common.defs
 import pdb
 
 ###
-#  Random string.
+#  Random string (lowercase letters and numbers).
 ###
 def rand_str(slen):
-    ostr = ""
-    for _ in range(0, slen):
-        cval = int(random.random()*61)
-
-        if cval < 26:
-            ostr += chr(cval + 65)
-        elif cval < 52:
-            ostr += chr(cval + 71)
-        else:
-            ostr += str(cval - 52)
-
-    return ostr
+    import random
+    return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in xrange(slen))
 
 ###
 #  random green
